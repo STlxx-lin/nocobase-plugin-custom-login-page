@@ -4,7 +4,7 @@
   "displayName.zh-CN": "自定义登录页面与模块扩展",
   "description": "Customizable login page layout (split brand layout & card templates), dynamic button/text/image/H5 custom modules, dialogs, and public workflow triggers.",
   "description.zh-CN": "可视化自定义登录页面布局（沉浸式左右分栏与居中卡片模版）、动态按钮/文本/照片/H5自定义模块、弹窗与工作流双模联动及防刷安全保护。",
-  "version": "0.2.0-beta.1",
+  "version": "0.2.0-beta.2",
   "main": "server.js",
   "client": "client.js",
   "client-v2": "client-v2.js",

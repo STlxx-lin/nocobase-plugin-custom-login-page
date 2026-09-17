@@ -18,7 +18,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/NocoBase-2.x%20Supported-blue?style=flat-square" alt="NocoBase 2.x" />
-  <img src="https://img.shields.io/badge/Version-0.2.0--beta.1-green?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/Version-0.2.0--beta.2-green?style=flat-square" alt="Version" />
   <img src="https://img.shields.io/badge/License-AGPL--3.0-orange?style=flat-square" alt="License" />
   <img src="https://img.shields.io/badge/TypeScript-Ready-3178c6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/FlowEngine-Native%20Grid-purple?style=flat-square" alt="FlowEngine" />
