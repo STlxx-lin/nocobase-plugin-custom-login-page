@@ -1,0 +1,8 @@
+/node_modules
+/src
+/scripts
+/storage
+/release
+*.tgz
+*.zip
+.github

@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Production build outputs
+dist/
+
+# Storage & runtime caches
+storage/
+*.log
+
+# Editor & OS files
+.DS_Store
+.idea/
+.vscode/
+Thumbs.db
+
+# Release packages
+release/
+*.tgz
+*.tar.gz
+*.zip
+
+.agent/
+.agents/
