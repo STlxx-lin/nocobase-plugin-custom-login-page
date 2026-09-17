@@ -8,6 +8,10 @@ on:
       - 'v*'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-release:
     name: Build & Release NocoBase Plugin
@@ -127,8 +131,33 @@ jobs:
           touch .env.e2e.example
           touch .env.test.example
 
-      - name: Install Dependencies
-        run: yarn install
+      - name: Cache Yarn Cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/yarn
+          key: ${{ runner.os }}-yarn-nocobase-${{ hashFiles('package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-nocobase-
+
+      - name: Install Dependencies with Retry
+        run: |
+          yarn config set network-timeout 600000
+          yarn config set registry https://registry.npmjs.org/
+          
+          n=0
+          until [ "$n" -ge 4 ]
+          do
+            echo "Running yarn install (attempt $((n+1)))..."
+            yarn install --network-timeout 600000 && break
+            n=$((n+1))
+            if [ "$n" -lt 4 ]; then
+              echo "yarn install failed due to network/registry glitch, retrying in 5 seconds..."
+              sleep 5
+            else
+              echo "ERROR: yarn install failed after 4 attempts."
+              exit 1
+            fi
+          done
 
       - name: Get Plugin Version
         id: plugin_version
@@ -138,34 +167,39 @@ jobs:
           echo "RELEASE_VERSION=${VERSION}" >> $GITHUB_ENV
           mkdir -p /tmp/release-artifacts
 
-      - name: Build & Package Plugin
+      - name: Build Plugin
         run: |
           yarn nocobase build @nocobase/plugin-custom-login-page
 
+      - name: Verify Build Artifacts & Package
+        run: |
           cd packages/plugins/@nocobase/plugin-custom-login-page
 
-          echo "=== Build File List ==="
+          echo "=== Verifying Build Artifacts ==="
+          test -f "server.js" || { echo "ERROR: server.js is missing!"; exit 1; }
+          test -f "client.js" || { echo "ERROR: client.js is missing!"; exit 1; }
+          test -f "client-v2.js" || { echo "ERROR: client-v2.js is missing!"; exit 1; }
+          test -d "dist" || { echo "ERROR: dist directory not found!"; exit 1; }
+          test -f "dist/server/index.js" || { echo "ERROR: dist/server/index.js is missing!"; exit 1; }
+          test -f "dist/client/index.js" || { echo "ERROR: dist/client/index.js is missing!"; exit 1; }
+          test -f "dist/client-v2/index.js" || { echo "ERROR: dist/client-v2/index.js is missing!"; exit 1; }
+
+          echo "=== Packaging Files List ==="
           ls -la
-          if [ ! -d "dist" ]; then
-            echo "ERROR: dist directory not found!"
-            exit 1
-          else
-            echo "dist directory found:"
-            ls -la dist
-          fi
 
+          # 打包发布产物 tgz 与 zip（显式包含运行时与说明文件，彻底排除开发与临时文件）
           tar -czvf "/tmp/release-artifacts/plugin-custom-login-page-v${RELEASE_VERSION}.tgz" \
-            --exclude="node_modules" \
-            --exclude=".git" \
-            --exclude=".github" \
-            --exclude="storage" \
-            --exclude="docs" \
-            --exclude="src" \
-            --exclude="scripts" \
-            *
+            package.json README.md README.en-US.md README_EN.md LICENSE server.js server.d.ts client.js client.d.ts client-v2.js client-v2.d.ts dist
 
-          zip -r "/tmp/release-artifacts/plugin-custom-login-page-v${RELEASE_VERSION}.zip" * \
-            -x "node_modules/*" ".git/*" ".github/*" "storage/*" "docs/*" "src/*" "scripts/*"
+          zip -r "/tmp/release-artifacts/plugin-custom-login-page-v${RELEASE_VERSION}.zip" \
+            package.json README.md README.en-US.md README_EN.md LICENSE server.js server.d.ts client.js client.d.ts client-v2.js client-v2.d.ts dist
+
+      - name: Generate Checksums
+        run: |
+          cd /tmp/release-artifacts
+          sha256sum plugin-custom-login-page-v*.tgz plugin-custom-login-page-v*.zip > sha256sums.txt
+          echo "=== Generated SHA256 Checksums ==="
+          cat sha256sums.txt
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
@@ -174,6 +208,7 @@ jobs:
           path: |
             /tmp/release-artifacts/plugin-custom-login-page-v*.tgz
             /tmp/release-artifacts/plugin-custom-login-page-v*.zip
+            /tmp/release-artifacts/sha256sums.txt
           retention-days: 30
 
       - name: Create GitHub Release
@@ -183,10 +218,11 @@ jobs:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', steps.plugin_version.outputs.version) }}
           name: ${{ github.ref_type == 'tag' && github.ref_name || format('Release v{0}', steps.plugin_version.outputs.version) }}
           draft: false
-          prerelease: ${{ contains(steps.plugin_version.outputs.version, 'beta') || contains(steps.plugin_version.outputs.version, 'alpha') }}
+          prerelease: ${{ contains(steps.plugin_version.outputs.version, 'beta') || contains(steps.plugin_version.outputs.version, 'alpha') || contains(steps.plugin_version.outputs.version, 'rc') }}
           generate_release_notes: true
           files: |
             /tmp/release-artifacts/plugin-custom-login-page-v*.tgz
             /tmp/release-artifacts/plugin-custom-login-page-v*.zip
+            /tmp/release-artifacts/sha256sums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

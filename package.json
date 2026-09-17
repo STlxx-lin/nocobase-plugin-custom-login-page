@@ -17,7 +17,10 @@
     "client-v2.js",
     "client-v2.d.ts",
     "package.json",
-    "README.md"
+    "README.md",
+    "README.en-US.md",
+    "README_EN.md",
+    "LICENSE"
   ],
   "nocobase": {
     "supportedVersions": [
