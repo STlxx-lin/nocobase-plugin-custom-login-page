@@ -1,24 +1,20 @@
 # Dependencies
 node_modules/
 
-# Production build outputs
+# Build outputs
 dist/
+lib/
+coverage/
 
-# Storage & runtime caches
+# Storage & Temporary
 storage/
 *.log
+.env
 
-# Editor & OS files
+# IDE
 .DS_Store
-.idea/
-.vscode/
 Thumbs.db
-
-# Release packages
-release/
-*.tgz
-*.tar.gz
-*.zip
-
+.vscode/
+.idea/
 .agent/
 .agents/
