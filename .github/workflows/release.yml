@@ -1,0 +1,192 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    name: Build & Release NocoBase Plugin
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          path: packages/plugins/@nocobase/plugin-custom-login-page
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Generate Root package.json
+        run: |
+          cat << 'HEREDOC' > package.json
+          {
+            "name": "nocobase-build-env",
+            "private": true,
+            "workspaces": [
+              "packages/*/*",
+              "packages/*/*/*"
+            ],
+            "scripts": {
+              "nocobase": "nocobase-v1"
+            },
+            "dependencies": {
+              "@nocobase/app": "2.2.0-beta.15",
+              "@nocobase/cli": "2.2.0-beta.15",
+              "@nocobase/build": "2.2.0-beta.15",
+              "@nocobase/devtools": "2.2.0-beta.15"
+            },
+            "resolutions": {
+              "cytoscape": "3.28.0",
+              "@types/react": "18.3.18",
+              "@types/react-dom": "^18.0.0",
+              "react-router-dom": "^6.30.1",
+              "react-router": "^6.30.1",
+              "antd": "5.24.2",
+              "async": "^3.2.6",
+              "rollup": "4.24.0",
+              "semver": "^7.7.1"
+            }
+          }
+          HEREDOC
+
+      - name: Generate Configuration Files
+        run: |
+          cat << 'HEREDOC' > lerna.json
+          {
+            "version": "0.1.0",
+            "npmClient": "yarn",
+            "useWorkspaces": true
+          }
+          HEREDOC
+          cat << 'HEREDOC' > tsconfig.json
+          {
+            "extends": "./tsconfig.paths.json",
+            "compilerOptions": {
+              "esModuleInterop": true,
+              "moduleResolution": "node",
+              "jsx": "react",
+              "target": "esnext",
+              "module": "esnext",
+              "allowJs": true,
+              "noUnusedLocals": false,
+              "preserveConstEnums": true,
+              "skipLibCheck": true,
+              "sourceMap": true,
+              "inlineSources": true,
+              "resolveJsonModule": true,
+              "declaration": true,
+              "experimentalDecorators": true,
+              "downlevelIteration": true,
+              "baseUrl": "."
+            },
+            "exclude": [
+              "node_modules",
+              "**/dist",
+              "**/lib",
+              "**/*.js",
+              "**/*.d.ts"
+            ]
+          }
+          HEREDOC
+          cat << 'HEREDOC' > tsconfig.paths.json
+          {
+            "compilerOptions": {
+              "paths": {
+                "@nocobase/plugin-custom-login-page/client": [
+                  "packages/plugins/@nocobase/plugin-custom-login-page/src/client"
+                ],
+                "@nocobase/plugin-custom-login-page/client-v2": [
+                  "packages/plugins/@nocobase/plugin-custom-login-page/src/client-v2"
+                ],
+                "@nocobase/plugin-custom-login-page/package.json": [
+                  "packages/plugins/@nocobase/plugin-custom-login-page/package.json"
+                ],
+                "@nocobase/plugin-custom-login-page": [
+                  "packages/plugins/@nocobase/plugin-custom-login-page/src"
+                ]
+              }
+            }
+          }
+          HEREDOC
+
+      - name: Create Env Files
+        run: |
+          touch .env
+          touch .env.example
+          touch .env.e2e.example
+          touch .env.test.example
+
+      - name: Install Dependencies
+        run: yarn install
+
+      - name: Get Plugin Version
+        id: plugin_version
+        run: |
+          VERSION=$(node -p "require('./packages/plugins/@nocobase/plugin-custom-login-page/package.json').version")
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "RELEASE_VERSION=${VERSION}" >> $GITHUB_ENV
+          mkdir -p /tmp/release-artifacts
+
+      - name: Build & Package Plugin
+        run: |
+          yarn nocobase build @nocobase/plugin-custom-login-page
+
+          cd packages/plugins/@nocobase/plugin-custom-login-page
+
+          echo "=== Build File List ==="
+          ls -la
+          if [ ! -d "dist" ]; then
+            echo "ERROR: dist directory not found!"
+            exit 1
+          else
+            echo "dist directory found:"
+            ls -la dist
+          fi
+
+          tar -czvf "/tmp/release-artifacts/plugin-custom-login-page-v${RELEASE_VERSION}.tgz" \
+            --exclude="node_modules" \
+            --exclude=".git" \
+            --exclude=".github" \
+            --exclude="storage" \
+            --exclude="docs" \
+            --exclude="src" \
+            --exclude="scripts" \
+            *
+
+          zip -r "/tmp/release-artifacts/plugin-custom-login-page-v${RELEASE_VERSION}.zip" * \
+            -x "node_modules/*" ".git/*" ".github/*" "storage/*" "docs/*" "src/*" "scripts/*"
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-custom-login-page-v${{ steps.plugin_version.outputs.version }}
+          path: |
+            /tmp/release-artifacts/plugin-custom-login-page-v*.tgz
+            /tmp/release-artifacts/plugin-custom-login-page-v*.zip
+          retention-days: 30
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', steps.plugin_version.outputs.version) }}
+          name: ${{ github.ref_type == 'tag' && github.ref_name || format('Release v{0}', steps.plugin_version.outputs.version) }}
+          draft: false
+          prerelease: ${{ contains(steps.plugin_version.outputs.version, 'beta') || contains(steps.plugin_version.outputs.version, 'alpha') }}
+          generate_release_notes: true
+          files: |
+            /tmp/release-artifacts/plugin-custom-login-page-v*.tgz
+            /tmp/release-artifacts/plugin-custom-login-page-v*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
