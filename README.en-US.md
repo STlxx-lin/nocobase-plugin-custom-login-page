@@ -27,6 +27,34 @@
 
 ---
 
+## 📸 Visual Showcase
+
+### 1. Full-Featured Login Page Preview (Modern Client-v2 Live Runtime)
+> Complete with top announcement bar, corporate hero slogan, 3-column features matrix, release countdown clock, multi-channel support with offline vector QR code, and modern authentication card.
+
+<p align="center">
+  <img src="./docs/images/01-custom-login-page-preview.png" alt="Full Login Page Preview" width="98%" />
+</p>
+
+### 2. Dual-Layer Studio Designer (Workbench Studio Bar)
+> Instant master activation switch, smooth mode switching (Design Mode ↔ Visitor Preview), 3 canvas widths (Standard / Widescreen / 100% Stretch), and 4 material themes.
+
+<p align="center">
+  <img src="./docs/images/02-workbench-studio-bar.png" alt="Workbench Studio Bar" width="98%" />
+</p>
+
+### 3. Visual Block Configuration Drawers
+<p align="center">
+  <img src="./docs/images/03-block-drawer-signin-form.png" alt="Authentication Form Settings" width="32%" />
+  <img src="./docs/images/04-block-drawer-hero.png" alt="Brand Hero Slogan Settings" width="32%" />
+  <img src="./docs/images/05-block-drawer-contact-qrcode.png" alt="Contact & Support Settings" width="32%" />
+</p>
+<p align="center">
+  <em>From left to right: Authentication Form Settings · Brand Hero Slogan & CTA Settings · Multi-channel Support & Vector QR Settings</em>
+</p>
+
+---
+
 ## 📖 Background & Design Philosophy
 
 The login page is the **front door and primary brand portal** of any enterprise application. However, conventional business systems and low-code platforms often present significant limitations:

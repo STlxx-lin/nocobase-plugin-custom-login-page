@@ -27,6 +27,34 @@
 
 ---
 
+## 📸 界面效果展示
+
+### 1. 登录页面全景效果（Modern Client-v2 实际运行）
+> 集成顶部平台公测公告、企业品牌标语 (Hero)、三大核心特性矩阵、V3.0 倒计时面板、多渠道客服与纯前端矢量二维码，以及右侧自适应登录认证表单。
+
+<p align="center">
+  <img src="./docs/images/01-custom-login-page-preview.png" alt="登录页面全景效果" width="98%" />
+</p>
+
+### 2. 双层工作台设计器（Workbench Studio Bar）
+> 支持一键切换【即刻生效主开关】、模式无缝切换（设计模式 ↔ 访客预览）、3 种画布宽度排版（标准 / 宽屏 / 100% 通栏）与 4 种微质感主题切换。
+
+<p align="center">
+  <img src="./docs/images/02-workbench-studio-bar.png" alt="双层工作台设计器" width="98%" />
+</p>
+
+### 3. 可视化区块属性配置抽屉（Block Property Drawers）
+<p align="center">
+  <img src="./docs/images/03-block-drawer-signin-form.png" alt="系统登录表单配置" width="32%" />
+  <img src="./docs/images/04-block-drawer-hero.png" alt="品牌宣讲标语配置" width="32%" />
+  <img src="./docs/images/05-block-drawer-contact-qrcode.png" alt="客服支持与二维码配置" width="32%" />
+</p>
+<p align="center">
+  <em>从左至右：系统登录表单配置（5款卡片主题） · 品牌宣传标语与 CTA 配置 · 多渠道客服与离线矢量二维码配置</em>
+</p>
+
+---
+
 ## 📖 业务背景与设计理念
 
 登录页面是企业业务系统与数字化门户的**第一入口与品牌门面**。然而在传统的业务系统与低代码平台中，登录页普遍存在以下痛点：
