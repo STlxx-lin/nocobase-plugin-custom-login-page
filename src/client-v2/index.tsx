@@ -82,10 +82,10 @@ const EnhancedSignInPage: React.FC<{ originalSignInPage: React.ComponentType }> 
     };
   }, [app]);
 
-  // 加载中占位，避免原生登录页闪烁
+  // 加载中占位，避免原生登录页闪烁与 320px 容器跳动
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a192f' }}>
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a192f' }}>
         <div style={{ color: '#fff', fontSize: 16 }}>{t('Loading sign-in page...')}</div>
       </div>
     );

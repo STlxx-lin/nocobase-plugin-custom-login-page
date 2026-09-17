@@ -222,9 +222,13 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
       </div>
     );
 
-    const isActualSignInRoute = typeof window !== 'undefined' && (
+    const isActualSignInRoute = typeof window !== 'undefined' && !designMode && (
       window.location.pathname === '/signin' ||
-      window.location.pathname.startsWith('/signin/')
+      window.location.pathname === '/v/signin' ||
+      window.location.pathname.endsWith('/signin') ||
+      window.location.pathname.startsWith('/signin/') ||
+      window.location.pathname.startsWith('/v/signin/') ||
+      (window.location.pathname.includes('/signin') && !window.location.pathname.includes('/settings/'))
     );
 
     return (
@@ -232,7 +236,8 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
         className={`custom-login-page-root custom-login-style-${containerStyle} ${designMode ? 'is-design-mode' : 'is-preview-mode'} ${isActualSignInRoute ? 'is-actual-signin-route' : 'is-settings-canvas-route'}`}
         style={{
           minHeight: isActualSignInRoute ? '100vh' : '460px',
-          width: '100%',
+          height: isActualSignInRoute ? '100vh' : 'auto',
+          width: isActualSignInRoute ? '100vw' : '100%',
           display: 'flex',
           flexDirection: 'column',
           position: isActualSignInRoute ? 'fixed' : 'relative',
@@ -240,21 +245,35 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
           left: isActualSignInRoute ? 0 : undefined,
           right: isActualSignInRoute ? 0 : undefined,
           bottom: isActualSignInRoute ? 0 : undefined,
-          zIndex: isActualSignInRoute ? 100 : undefined,
+          zIndex: isActualSignInRoute ? 1000 : undefined,
           overflowY: isActualSignInRoute ? 'auto' : 'visible',
           boxSizing: 'border-box',
           ...getContainerBg(),
         }}
       >
-        {/* 全局 Markdown 及区块穿透样式：彻底解决卡片白底冲突 */}
+        {/* 全局 Markdown 及区块穿透样式：彻底解决卡片白底冲突与父级 320px 挤压问题 */}
         <style>{`
-          /* 仅在前台实际登录路由下穿透重置父级容器，绝不污染后台管理界面 */
+          /* 仅在前台实际登录路由下穿透重置父级容器，全屏铺展，绝不污染后台管理界面 */
           .custom-login-page-root.is-actual-signin-route {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            min-height: 100vh !important;
+            z-index: 1000 !important;
             display: flex !important;
           }
           body:has(.custom-login-page-root.is-actual-signin-route) {
             overflow: hidden !important;
           }
+          /* 穿透重置祖先容器的 max-width: 320px 限制，彻底消除挤压变形 */
+          body:has(.custom-login-page-root.is-actual-signin-route) div:has(> * > * > .custom-login-page-root.is-actual-signin-route),
+          body:has(.custom-login-page-root.is-actual-signin-route) div:has(> * > .custom-login-page-root.is-actual-signin-route),
+          body:has(.custom-login-page-root.is-actual-signin-route) div:has(> .custom-login-page-root.is-actual-signin-route),
+          div:has(> * > * > .custom-login-page-root.is-actual-signin-route),
           div:has(> * > .custom-login-page-root.is-actual-signin-route),
           div:has(> .custom-login-page-root.is-actual-signin-route) {
             max-width: 100% !important;
@@ -262,8 +281,16 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
             margin: 0 !important;
             padding: 0 !important;
           }
-          div:has(> * > .custom-login-page-root.is-actual-signin-route) > h1,
-          div:has(> .custom-login-page-root.is-actual-signin-route) > h1 {
+          /* 隐藏原生 AuthLayout 的居中大标题与底部版权，由自定义登录页统管展示 */
+          body:has(.custom-login-page-root.is-actual-signin-route) div:has(> * > * > .custom-login-page-root.is-actual-signin-route) > h1,
+          body:has(.custom-login-page-root.is-actual-signin-route) div:has(> * > .custom-login-page-root.is-actual-signin-route) > h1,
+          body:has(.custom-login-page-root.is-actual-signin-route) div:has(> .custom-login-page-root.is-actual-signin-route) > h1,
+          body:has(.custom-login-page-root.is-actual-signin-route) > div > h1,
+          body:has(.custom-login-page-root.is-actual-signin-route) > * h1:not([class]) {
+            display: none !important;
+          }
+          body:has(.custom-login-page-root.is-actual-signin-route) div:has(> * > * > .custom-login-page-root.is-actual-signin-route) > div:has(> .nb-powered-by),
+          body:has(.custom-login-page-root.is-actual-signin-route) div:has(> .custom-login-page-root.is-actual-signin-route) > div:has(> .nb-powered-by) {
             display: none !important;
           }
 
