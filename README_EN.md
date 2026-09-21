@@ -18,7 +18,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/NocoBase-2.x%20Supported-blue?style=flat-square" alt="NocoBase 2.x" />
-  <img src="https://img.shields.io/badge/Version-0.2.0--beta.2-green?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/Version-0.2.0--beta.3-green?style=flat-square" alt="Version" />
   <img src="https://img.shields.io/badge/License-AGPL--3.0-orange?style=flat-square" alt="License" />
   <img src="https://img.shields.io/badge/TypeScript-Ready-3178c6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/FlowEngine-Native%20Grid-purple?style=flat-square" alt="FlowEngine" />
@@ -181,7 +181,30 @@ This repository includes a pre-configured GitHub Actions workflow ([`.github/wor
 - 🏷️ **Automated Releases**: Generates GitHub Releases with auto-versioning and release notes upon pushing tags or to `main`.
 
 ---
-
+ 
+## ⚖️ Open Source License & Brand Compliance
+ 
+This plugin strictly adheres to the official **NocoBase Open Source License (AGPL-3.0 with Commons Clause / Dual License)** and community guidelines:
+ 
+1. **Preservation of Official Branding**:
+   Under the NocoBase open-source terms, **official branding, trademarks, names, hyperlinks, version indicators, and license notices cannot be removed or altered in open-source releases**.
+2. **Compliant Native Presentation**:
+   - **No Hidden Selectors**: The plugin source code contains zero CSS or script rules designed to hide, obscure, or alter official NocoBase brand elements, logos, or hyperlinks;
+   - **Integrated Footer Component**: The sign-in page footer natively renders the official `<PoweredBy />` badge, website link ([https://www.nocobase.com](https://www.nocobase.com)), and system version string;
+   - **Harmonious Enterprise Copyright**: Organizations can configure custom copyright notices and regulatory filing details, which are elegantly displayed alongside the official NocoBase badge;
+   - **High-Contrast Adaptive Theming**: Official branding adapts dynamically across dark, light, frosted glass, and high-definition photo wallpapers with high-contrast accessibility.
+ 
+---
+ 
+## 📝 Changelog
+ 
+### v0.2.0-beta.3 (2026-09-21)
+- ⚖️ **License & Branding Compliance**: Fully aligned with NocoBase open-source licensing rules by removing all hidden rules targeting `.nb-powered-by`;
+- 🛡️ **Native PoweredBy Badge**: Embedded official `<PoweredBy />` mark with a safe fallback error boundary (`SafePoweredBy`) ensuring links, logos, and version information are visible and clickable;
+- 🎨 **Settings Compliance Guidance**: Added open-source compliance reminders to the settings drawer to guide administrators in configuring copyright notices legally.
+ 
+---
+ 
 ## 📄 License
-
+ 
 This project is open-source under the [AGPL-3.0 License](LICENSE).

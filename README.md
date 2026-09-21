@@ -18,7 +18,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/NocoBase-2.x%20Supported-blue?style=flat-square" alt="NocoBase 2.x" />
-  <img src="https://img.shields.io/badge/Version-0.2.0--beta.2-green?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/Version-0.2.0--beta.3-green?style=flat-square" alt="Version" />
   <img src="https://img.shields.io/badge/License-AGPL--3.0-orange?style=flat-square" alt="License" />
   <img src="https://img.shields.io/badge/TypeScript-Ready-3178c6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/FlowEngine-Native%20Grid-purple?style=flat-square" alt="FlowEngine" />
@@ -179,6 +179,29 @@ yarn build @nocobase/plugin-custom-login-page
 - 📦 **纯净产物打包**：精确打包运行时代码，自动生成 `.tgz` 与 `.zip` 双格式安装包；
 - 🔐 **SHA256 安全哈希**：自动计算产物安全校验码（`sha256sums.txt`），便于生产审计；
 - 🏷️ **智能 Release 发布**：推送标签（Tag）或推送到 `main` 分支时自动创建 Release，包含版本号识别与变更说明。
+
+---
+
+## ⚖️ 开源许可与品牌合规声明 (Open Source License & Brand Compliance)
+
+本项目严格遵守 **NocoBase 官方开源许可协议 (AGPL-3.0 with Commons Clause / Dual License)** 及社区开源治理准则：
+
+1. **开源品牌不可移除原则**：
+   依据 NocoBase 官方开源协议明确规定，**开源版本不可移除或更改软件界面上有关 NocoBase 的品牌、名称、链接、版本号、许可证等信息**。
+2. **规范优雅的原生呈现**：
+   - **杜绝隐匿**：本插件源码中不包含任何通过 CSS、DOM 脚本针对 NocoBase 品牌标志、名称、链接、版本及版权组件的隐藏、遮盖或篡改逻辑；
+   - **原生页脚集成**：自定义登录页底部（Footer）标准渲染官方原生 `<PoweredBy />` 标牌与官网链接（[https://www.nocobase.com](https://www.nocobase.com) / [中文网](https://www.nocobase.com/cn/)）及系统版本号；
+   - **自主版权融合**：支持企事业单位在后台配置自主版权声明（如 `Copyright © 2026 XX科技`）与 ICP 备案信息，系统将二者并列规范呈现，既保障企业个性化品牌展示，又恪守开源合规准则；
+   - **智能高对比度自适应**：在深色、浅色、通透毛玻璃或高清大图壁纸下，官方品牌与链接均具备自适应高对比度，确保文字清晰可读、链接有效可点击。
+
+---
+
+## 📝 更新日志 (Changelog)
+
+### v0.2.0-beta.3 (2026-09-21)
+- ⚖️ **开源许可与品牌合规**：全面遵从 NocoBase 开源许可规范，彻底清除任何隐藏 `.nb-powered-by` 的样式规则；
+- 🛡️ **原生 PoweredBy 优雅承载**：页脚原生内置官方 `<PoweredBy />` 标牌与安全错误边界（`SafePoweredBy`），确保官网链接、品牌名称与版本号始终清晰可见；
+- 🎨 **后台合规配置指引**：在后台设置抽屉中添加开源许可合规提示，指导管理员规范设置企业版权与 ICP 备案号。
 
 ---
 

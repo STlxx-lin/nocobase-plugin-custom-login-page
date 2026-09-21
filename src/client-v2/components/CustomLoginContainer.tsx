@@ -1,5 +1,6 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useState, useEffect } from 'react';
 import { theme } from 'antd';
+import { PoweredBy } from '@nocobase/client-v2';
 import { CustomLoginConfig } from '../types';
 import { LoginPageBlockGridCanvas, LoginPageBlockGridCanvasRef } from './LoginPageBlockGridCanvas';
 
@@ -11,6 +12,86 @@ export interface CustomLoginContainerProps {
   onModelReady?: (model: any) => void;
   originalSignInPage?: React.ComponentType;
 }
+
+// 🛡️ 官方 PoweredBy 渲染错误边界：应对极少数环境上下文缺失情况，永不中断，保障 100% 呈现官方品牌
+class PoweredByCatchBoundary extends React.Component<{ fallback: React.ReactNode; children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(err: any) {
+    // 降级兜底
+  }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
+/**
+ * 遵守 NocoBase 开源许可证协议规范的品牌组件：
+ * 开源版本不可移除或更改软件界面上有关 NocoBase 的品牌、名称、链接、版本号、许可证等信息
+ */
+export const SafePoweredBy: React.FC<{ isLightBg: boolean }> = ({ isLightBg }) => {
+  const [appVersion, setAppVersion] = useState<string>('');
+
+  useEffect(() => {
+    try {
+      const app = (window as any)?.__nocobase_v2_app__ || (window as any)?.__nocobase_current_app__ || (window as any)?.__nocobase_app__;
+      const v = app?.version || app?.info?.version || (window as any)?.__nocobase_app_version__;
+      if (v) setAppVersion(v);
+    } catch (e) {}
+  }, []);
+
+  const fallbackBrand = (
+    <div
+      style={{
+        fontSize: 13,
+        color: isLightBg ? '#64748b' : 'rgba(255, 255, 255, 0.85)',
+        textShadow: isLightBg ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.4)',
+        textAlign: 'center',
+        lineHeight: 1.6,
+      }}
+    >
+      Powered by{' '}
+      <a
+        href="https://www.nocobase.com"
+        target="_blank"
+        rel="noreferrer"
+        style={{
+          color: isLightBg ? '#1677ff' : '#93c5fd',
+          fontWeight: 600,
+          textDecoration: 'none',
+          marginLeft: 4,
+        }}
+      >
+        NocoBase
+      </a>
+      {appVersion ? <span style={{ opacity: 0.85, marginLeft: 6, fontSize: 12 }}>v{appVersion}</span> : null}
+    </div>
+  );
+
+  return (
+    <PoweredByCatchBoundary fallback={fallbackBrand}>
+      <div
+        className="custom-login-powered-by-box"
+        style={{
+          fontSize: 13,
+          color: isLightBg ? '#64748b' : 'rgba(255, 255, 255, 0.85)',
+          textShadow: isLightBg ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.4)',
+          textAlign: 'center',
+        }}
+      >
+        <PoweredBy />
+      </div>
+    </PoweredByCatchBoundary>
+  );
+};
 
 // 🛡️ 生产级错误边界保护：拦截任意自定义区块的未捕获崩溃，自动安全降级为官方原生登录，永不白屏！
 interface ErrorBoundaryProps {
@@ -47,6 +128,9 @@ export class CustomLoginErrorBoundary extends React.Component<ErrorBoundaryProps
               ⚠️ 自定义登录画布渲染异常，已自动启用系统原生登录安全保障模式。
             </div>
             {Fallback ? <Fallback /> : <div>请联系系统管理员修复自定义登录配置。</div>}
+          </div>
+          <div style={{ marginTop: 24, textAlign: 'center' }}>
+            <SafePoweredBy isLightBg={false} />
           </div>
         </div>
       );
@@ -206,20 +290,26 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
 
     const isLightBg = isLightBackground();
 
-    // 默认页脚版权
+    // 合规页脚：遵从 NocoBase 开源协议规范，原样保留官方 PoweredBy 品牌、名称、链接与版本，融合用户自定义版权及 ICP
     const renderFooter = () => (
-      <div
+      <footer
+        className="custom-login-page-footer"
         style={{
-          padding: '16px 24px',
+          padding: '16px 24px 24px',
           textAlign: 'center',
           fontSize: 13,
           color: isLightBg ? '#64748b' : 'rgba(255, 255, 255, 0.85)',
           textShadow: isLightBg ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.4)',
+          position: 'relative',
+          zIndex: 10,
         }}
       >
-        {themeConfig.copyright && <div>{themeConfig.copyright}</div>}
-        {themeConfig.icp && <div style={{ marginTop: 4 }}>{themeConfig.icp}</div>}
-      </div>
+        {themeConfig.copyright && <div style={{ marginBottom: 4 }}>{themeConfig.copyright}</div>}
+        {themeConfig.icp && <div style={{ marginBottom: 6, fontSize: 12 }}>{themeConfig.icp}</div>}
+        <div style={{ marginTop: 4 }}>
+          <SafePoweredBy isLightBg={isLightBg} />
+        </div>
+      </footer>
     );
 
     const isActualSignInRoute = typeof window !== 'undefined' && !designMode && (
@@ -281,7 +371,7 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
             margin: 0 !important;
             padding: 0 !important;
           }
-          /* 隐藏原生 AuthLayout 的居中大标题与底部版权，由自定义登录页统管展示 */
+          /* 重置原生 AuthLayout 冗余标题，在自定义登录画布内由表单头部与专属区块更优雅呈现系统品牌 */
           body:has(.custom-login-page-root.is-actual-signin-route) div:has(> * > * > .custom-login-page-root.is-actual-signin-route) > h1,
           body:has(.custom-login-page-root.is-actual-signin-route) div:has(> * > .custom-login-page-root.is-actual-signin-route) > h1,
           body:has(.custom-login-page-root.is-actual-signin-route) div:has(> .custom-login-page-root.is-actual-signin-route) > h1,
@@ -289,9 +379,20 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
           body:has(.custom-login-page-root.is-actual-signin-route) > * h1:not([class]) {
             display: none !important;
           }
-          body:has(.custom-login-page-root.is-actual-signin-route) div:has(> * > * > .custom-login-page-root.is-actual-signin-route) > div:has(> .nb-powered-by),
-          body:has(.custom-login-page-root.is-actual-signin-route) div:has(> .custom-login-page-root.is-actual-signin-route) > div:has(> .nb-powered-by) {
-            display: none !important;
+
+          /* NocoBase 官方品牌标牌与链接样式自适应：保障高对比度、清晰可见、可正常点击 */
+          .custom-login-powered-by-box {
+            display: inline-block;
+          }
+          .custom-login-powered-by-box a {
+            color: ${isLightBg ? '#1677ff' : '#93c5fd'} !important;
+            text-decoration: none !important;
+            font-weight: 600 !important;
+            transition: all 0.2s ease;
+          }
+          .custom-login-powered-by-box a:hover {
+            text-decoration: underline !important;
+            opacity: 0.85;
           }
 
           /* 访客视角下绝对隐藏编辑悬浮按钮 */

@@ -761,11 +761,20 @@ export const CustomLoginPageSettings: React.FC = () => {
             />
           </Form.Item>
 
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 16, borderRadius: 8, fontSize: 12 }}
+            message={t('License Compliance Note')}
+            description={t('In compliance with the NocoBase Open Source License, official branding, names, links, version numbers, and license notices cannot be removed or altered in open-source editions. The sign-in page footer will preserve the official "Powered by NocoBase" label and website link alongside your custom copyright.')}
+          />
+
           <Form.Item
             name={['themeConfig', 'copyright']}
-            label={t('Footer copyright')}
+            label={t('Custom Enterprise Copyright (Optional)')}
+            extra={t('Will be displayed alongside the official NocoBase brand')}
           >
-            <Input placeholder="Copyright © 2026 NocoBase. All rights reserved." />
+            <Input placeholder="Copyright © 2026 Your Company. All rights reserved." />
           </Form.Item>
 
           <Form.Item

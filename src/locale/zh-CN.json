@@ -97,5 +97,9 @@
   "Visitor preview": "访客预览",
   "Currently disabled: Front-end visitors will see the native system login form. Toggle switch to enable.": "当前处于【已停用】状态：前台访客将展示系统原生登录表单。开启上方开关即可恢复生效。",
   "Custom login page is currently disabled. Front-end visitors accessing /signin will see the native system login page. You can still design and edit below; when ready, turn on the switch above to take effect.": "自定义登录页当前处于【已停用】状态。前台访客访问 /signin 将展示系统原生登录页面。您仍可在下方继续设计与排版；准备就绪后，点击上方开关即可立即生效。",
-  "Enable now": "立即生效"
+  "Enable now": "立即生效",
+  "License Compliance Note": "开源许可合规提示",
+  "In compliance with the NocoBase Open Source License, official branding, names, links, version numbers, and license notices cannot be removed or altered in open-source editions. The sign-in page footer will preserve the official \"Powered by NocoBase\" label and website link alongside your custom copyright.": "依据 NocoBase 开源许可协议，开源版本不可移除或更改软件界面上有关 NocoBase 的品牌、名称、链接、版本号、许可证等信息。系统页脚将始终规范保留官方 \"Powered by NocoBase\" 标识与官网链接，并与您的自定义企业版权并列呈现。",
+  "Custom Enterprise Copyright (Optional)": "企业自主版权声明 (选填)",
+  "Will be displayed alongside the official NocoBase brand": "将与官方 NocoBase 品牌标识并列呈现"
 }
