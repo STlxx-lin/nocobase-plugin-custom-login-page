@@ -35,7 +35,7 @@ class PoweredByCatchBoundary extends React.Component<{ fallback: React.ReactNode
 
 /**
  * 遵守 NocoBase 开源许可证协议规范的品牌组件：
- * 开源版本不可移除或更改软件界面上有关 NocoBase 的品牌、名称、链接、版本号、许可证等信息
+ * 100% 原生接入官方 <PoweredBy /> 组件，天然支持官方商业版 @nocobase/plugin-custom-brand 自定义品牌无缝替换
  */
 export const SafePoweredBy: React.FC<{ isLightBg: boolean }> = ({ isLightBg }) => {
   const [appVersion, setAppVersion] = useState<string>('');
@@ -56,13 +56,13 @@ export const SafePoweredBy: React.FC<{ isLightBg: boolean }> = ({ isLightBg }) =
     } catch (e) {}
   }, []);
 
-  return (
+  // 降级备用（极端缺失 Context 环境下保障展示与防崩溃）
+  const fallbackBrand = (
     <div
-      className="custom-login-powered-by-box"
       style={{
         fontSize: 13,
-        color: isLightBg ? '#64748b' : 'rgba(255, 255, 255, 0.82)',
-        textShadow: isLightBg ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.6)',
+        color: isLightBg ? '#64748b' : 'rgba(255, 255, 255, 0.85)',
+        textShadow: isLightBg ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.65)',
         textAlign: 'center',
         display: 'inline-flex',
         alignItems: 'center',
@@ -72,7 +72,7 @@ export const SafePoweredBy: React.FC<{ isLightBg: boolean }> = ({ isLightBg }) =
         lineHeight: 1.6,
       }}
     >
-      <span style={{ color: isLightBg ? '#64748b' : 'rgba(255, 255, 255, 0.82)' }}>Powered by</span>
+      <span>Powered by</span>
       <a
         href={homePageUrl}
         target="_blank"
@@ -102,6 +102,23 @@ export const SafePoweredBy: React.FC<{ isLightBg: boolean }> = ({ isLightBg }) =
         </span>
       ) : null}
     </div>
+  );
+
+  return (
+    <PoweredByCatchBoundary fallback={fallbackBrand}>
+      <div
+        className="custom-login-powered-by-box"
+        style={{
+          fontSize: 13,
+          color: isLightBg ? '#64748b' : 'rgba(255, 255, 255, 0.85)',
+          textShadow: isLightBg ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.65)',
+          textAlign: 'center',
+          display: 'inline-block',
+        }}
+      >
+        <PoweredBy />
+      </div>
+    </PoweredByCatchBoundary>
   );
 };
 
@@ -421,17 +438,15 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
           }
 
           /* NocoBase 官方品牌标牌与链接样式自适应：保障高对比度、清晰可见、可正常点击 */
-          .custom-login-powered-by-box {
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            gap: 6px !important;
+          .custom-login-powered-by-box,
+          .custom-login-powered-by-box > div,
+          .custom-login-powered-by-box .nb-brand,
+          .custom-login-powered-by-box span,
+          .custom-login-powered-by-box p {
+            color: ${isLightBg ? '#64748b' : 'rgba(255, 255, 255, 0.85)'} !important;
+            text-shadow: ${isLightBg ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.65)'} !important;
             font-size: 13px !important;
             line-height: 1.6 !important;
-          }
-          .custom-login-powered-by-box span {
-            color: ${isLightBg ? '#64748b' : 'rgba(255, 255, 255, 0.82)'} !important;
-            text-shadow: ${isLightBg ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.65)'} !important;
           }
           .custom-login-powered-by-box a,
           .custom-login-powered-by-box a.custom-login-brand-link {

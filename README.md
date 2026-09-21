@@ -18,7 +18,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/NocoBase-2.x%20Supported-blue?style=flat-square" alt="NocoBase 2.x" />
-  <img src="https://img.shields.io/badge/Version-0.2.0--beta.4-green?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/Version-0.2.0--beta.5-green?style=flat-square" alt="Version" />
   <img src="https://img.shields.io/badge/License-AGPL--3.0-orange?style=flat-square" alt="License" />
   <img src="https://img.shields.io/badge/TypeScript-Ready-3178c6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/FlowEngine-Native%20Grid-purple?style=flat-square" alt="FlowEngine" />
@@ -197,6 +197,10 @@ yarn build @nocobase/plugin-custom-login-page
 ---
 
 ## 📝 更新日志 (Changelog)
+
+### v0.2.0-beta.5 (2026-09-21)
+- 🏢 **官方原生 PoweredBy 深度直连**：100% 直连承接官方原生 `<PoweredBy />` 组件，天然无缝支持官方商业版 `@nocobase/plugin-custom-brand`（自定义品牌插件）的企业品牌替换功能；
+- ⚡ **穿透覆盖高对比度样式**：即便启用了商业版 `.nb-brand` 自定义品牌模板，外层样式依然自适应提供高对比度与文字阴影，兼顾企业商业品牌替换与视觉质感。
 
 ### v0.2.0-beta.4 (2026-09-21)
 - 🎨 **页脚视觉与对比度重磅优化**：彻底解决暗色背景或高清壁纸下 "Powered by" 文本因浅色主题 Token 污染而发黑看不清的缺陷；
