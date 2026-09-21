@@ -18,7 +18,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/NocoBase-2.x%20Supported-blue?style=flat-square" alt="NocoBase 2.x" />
-  <img src="https://img.shields.io/badge/Version-0.2.0--beta.3-green?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/Version-0.2.0--beta.4-green?style=flat-square" alt="Version" />
   <img src="https://img.shields.io/badge/License-AGPL--3.0-orange?style=flat-square" alt="License" />
   <img src="https://img.shields.io/badge/TypeScript-Ready-3178c6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/FlowEngine-Native%20Grid-purple?style=flat-square" alt="FlowEngine" />
@@ -197,6 +197,11 @@ This plugin strictly adheres to the official **NocoBase Open Source License (AGP
 ---
  
 ## 📝 Changelog
+ 
+### v0.2.0-beta.4 (2026-09-21)
+- 🎨 **Footer Contrast & Visual Aesthetics**: Completely resolved dark wallpaper contrast issues where "Powered by" text was darkened by light-theme tokens, ensuring crystalline readability;
+- 💎 **Refined Interactive Hyperlinks**: Eliminated harsh default underlines in favor of smooth, luminous hover micro-interactions (Hover underline with radiant white glow);
+- ✨ **Enhanced Spacing & Depth**: Engineered relaxed fluid spacing (Gap 8px) with subtle ambient text shadows for enterprise copyright, regulatory ICP, and official Powered by notices.
  
 ### v0.2.0-beta.3 (2026-09-21)
 - ⚖️ **License & Branding Compliance**: Fully aligned with NocoBase open-source licensing rules by removing all hidden rules targeting `.nb-powered-by`;

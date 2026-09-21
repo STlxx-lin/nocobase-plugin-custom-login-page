@@ -18,7 +18,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/NocoBase-2.x%20Supported-blue?style=flat-square" alt="NocoBase 2.x" />
-  <img src="https://img.shields.io/badge/Version-0.2.0--beta.3-green?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/Version-0.2.0--beta.4-green?style=flat-square" alt="Version" />
   <img src="https://img.shields.io/badge/License-AGPL--3.0-orange?style=flat-square" alt="License" />
   <img src="https://img.shields.io/badge/TypeScript-Ready-3178c6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/FlowEngine-Native%20Grid-purple?style=flat-square" alt="FlowEngine" />
@@ -197,6 +197,11 @@ yarn build @nocobase/plugin-custom-login-page
 ---
 
 ## 📝 更新日志 (Changelog)
+
+### v0.2.0-beta.4 (2026-09-21)
+- 🎨 **页脚视觉与对比度重磅优化**：彻底解决暗色背景或高清壁纸下 "Powered by" 文本因浅色主题 Token 污染而发黑看不清的缺陷；
+- 💎 **精致超链接交互体验**：彻底移除突兀粗糙的常驻下划线，升级为悬浮微光动效（Hover 下划线与晶莹亮白）；
+- ✨ **排版与层次感全面升级**：自主版权、ICP 备案与官方 Powered by 采用流式呼吸间距（Gap 8px），搭配细腻文字阴影（Text Shadow），在各种复杂大图壁纸下均清晰立体呈现。
 
 ### v0.2.0-beta.3 (2026-09-21)
 - ⚖️ **开源许可与品牌合规**：全面遵从 NocoBase 开源许可规范，彻底清除任何隐藏 `.nb-powered-by` 的样式规则；

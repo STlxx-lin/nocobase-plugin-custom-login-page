@@ -39,57 +39,69 @@ class PoweredByCatchBoundary extends React.Component<{ fallback: React.ReactNode
  */
 export const SafePoweredBy: React.FC<{ isLightBg: boolean }> = ({ isLightBg }) => {
   const [appVersion, setAppVersion] = useState<string>('');
+  const [homePageUrl, setHomePageUrl] = useState<string>('https://www.nocobase.com');
 
   useEffect(() => {
     try {
       const app = (window as any)?.__nocobase_v2_app__ || (window as any)?.__nocobase_current_app__ || (window as any)?.__nocobase_app__;
       const v = app?.version || app?.info?.version || (window as any)?.__nocobase_app_version__;
       if (v) setAppVersion(v);
+
+      const locale = (window as any)?.__nocobase_locale__ || localStorage.getItem('NOCOBASE_LOCALE') || navigator.language;
+      if (typeof locale === 'string' && locale.toLowerCase().includes('zh')) {
+        setHomePageUrl('https://www.nocobase.com/cn/');
+      } else {
+        setHomePageUrl('https://www.nocobase.com');
+      }
     } catch (e) {}
   }, []);
 
-  const fallbackBrand = (
+  return (
     <div
+      className="custom-login-powered-by-box"
       style={{
         fontSize: 13,
-        color: isLightBg ? '#64748b' : 'rgba(255, 255, 255, 0.85)',
-        textShadow: isLightBg ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.4)',
+        color: isLightBg ? '#64748b' : 'rgba(255, 255, 255, 0.82)',
+        textShadow: isLightBg ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.6)',
         textAlign: 'center',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexWrap: 'wrap',
+        gap: 6,
         lineHeight: 1.6,
       }}
     >
-      Powered by{' '}
+      <span style={{ color: isLightBg ? '#64748b' : 'rgba(255, 255, 255, 0.82)' }}>Powered by</span>
       <a
-        href="https://www.nocobase.com"
+        href={homePageUrl}
         target="_blank"
         rel="noreferrer"
+        className="custom-login-brand-link"
         style={{
           color: isLightBg ? '#1677ff' : '#93c5fd',
           fontWeight: 600,
           textDecoration: 'none',
-          marginLeft: 4,
+          transition: 'all 0.2s ease',
+          outline: 'none',
         }}
       >
         NocoBase
       </a>
-      {appVersion ? <span style={{ opacity: 0.85, marginLeft: 6, fontSize: 12 }}>v{appVersion}</span> : null}
+      {appVersion ? (
+        <span
+          style={{
+            opacity: 0.75,
+            fontSize: 12,
+            marginLeft: 2,
+            color: isLightBg ? '#64748b' : 'rgba(255, 255, 255, 0.75)',
+            fontFamily: 'monospace',
+          }}
+        >
+          v{appVersion}
+        </span>
+      ) : null}
     </div>
-  );
-
-  return (
-    <PoweredByCatchBoundary fallback={fallbackBrand}>
-      <div
-        className="custom-login-powered-by-box"
-        style={{
-          fontSize: 13,
-          color: isLightBg ? '#64748b' : 'rgba(255, 255, 255, 0.85)',
-          textShadow: isLightBg ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.4)',
-          textAlign: 'center',
-        }}
-      >
-        <PoweredBy />
-      </div>
-    </PoweredByCatchBoundary>
   );
 };
 
@@ -295,18 +307,46 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
       <footer
         className="custom-login-page-footer"
         style={{
-          padding: '16px 24px 24px',
+          padding: '20px 24px 28px',
           textAlign: 'center',
           fontSize: 13,
-          color: isLightBg ? '#64748b' : 'rgba(255, 255, 255, 0.85)',
-          textShadow: isLightBg ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.4)',
+          color: isLightBg ? '#64748b' : 'rgba(255, 255, 255, 0.92)',
+          textShadow: isLightBg ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.65)',
           position: 'relative',
           zIndex: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          boxSizing: 'border-box',
         }}
       >
-        {themeConfig.copyright && <div style={{ marginBottom: 4 }}>{themeConfig.copyright}</div>}
-        {themeConfig.icp && <div style={{ marginBottom: 6, fontSize: 12 }}>{themeConfig.icp}</div>}
-        <div style={{ marginTop: 4 }}>
+        {themeConfig.copyright && (
+          <div
+            className="custom-login-copyright-text"
+            style={{
+              letterSpacing: '0.2px',
+              color: isLightBg ? '#475569' : '#ffffff',
+              fontWeight: 400,
+            }}
+          >
+            {themeConfig.copyright}
+          </div>
+        )}
+        {themeConfig.icp && (
+          <div
+            className="custom-login-icp-text"
+            style={{
+              fontSize: 12,
+              opacity: 0.85,
+              color: isLightBg ? '#64748b' : 'rgba(255, 255, 255, 0.82)',
+            }}
+          >
+            {themeConfig.icp}
+          </div>
+        )}
+        <div className="custom-login-powered-wrapper" style={{ marginTop: 2 }}>
           <SafePoweredBy isLightBg={isLightBg} />
         </div>
       </footer>
@@ -382,17 +422,32 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
 
           /* NocoBase 官方品牌标牌与链接样式自适应：保障高对比度、清晰可见、可正常点击 */
           .custom-login-powered-by-box {
-            display: inline-block;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            font-size: 13px !important;
+            line-height: 1.6 !important;
           }
-          .custom-login-powered-by-box a {
+          .custom-login-powered-by-box span {
+            color: ${isLightBg ? '#64748b' : 'rgba(255, 255, 255, 0.82)'} !important;
+            text-shadow: ${isLightBg ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.65)'} !important;
+          }
+          .custom-login-powered-by-box a,
+          .custom-login-powered-by-box a.custom-login-brand-link {
             color: ${isLightBg ? '#1677ff' : '#93c5fd'} !important;
             text-decoration: none !important;
             font-weight: 600 !important;
-            transition: all 0.2s ease;
+            text-shadow: ${isLightBg ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.65)'} !important;
+            transition: all 0.2s ease !important;
+            border-bottom: 1px solid transparent !important;
+            padding-bottom: 1px !important;
           }
-          .custom-login-powered-by-box a:hover {
-            text-decoration: underline !important;
-            opacity: 0.85;
+          .custom-login-powered-by-box a:hover,
+          .custom-login-powered-by-box a.custom-login-brand-link:hover {
+            color: ${isLightBg ? '#0958d9' : '#ffffff'} !important;
+            text-decoration: none !important;
+            border-bottom-color: ${isLightBg ? '#0958d9' : '#ffffff'} !important;
           }
 
           /* 访客视角下绝对隐藏编辑悬浮按钮 */
