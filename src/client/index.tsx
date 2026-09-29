@@ -8,10 +8,24 @@ import { CustomLoginContainer } from '../client-v2/components/CustomLoginContain
 import { CustomLoginPageSettings } from '../client-v2/pages/CustomLoginPageSettings';
 import { CustomLoginConfig } from '../client-v2/types';
 
+const getInitialCachedConfig = (): { config: CustomLoginConfig | null; hasCached: boolean } => {
+  if (typeof window === 'undefined') return { config: null, hasCached: false };
+  try {
+    const raw = localStorage.getItem('nocobase_custom_login_public_config_v2');
+    if (!raw) return { config: null, hasCached: false };
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      return { config: parsed, hasCached: true };
+    }
+  } catch (e) {}
+  return { config: null, hasCached: false };
+};
+
 const CustomAuthLayout: React.FC = () => {
   const apiClient = useAPIClient();
-  const [config, setConfig] = useState<CustomLoginConfig | null>(null);
-  const [loading, setLoading] = useState(true);
+  const initialCache = React.useMemo(() => getInitialCachedConfig(), []);
+  const [config, setConfig] = useState<CustomLoginConfig | null>(initialCache.config);
+  const [loading, setLoading] = useState(!initialCache.hasCached);
   const [systemTitle, setSystemTitle] = useState<string>(() => {
     return (window as any)?.__nocobase_cached_system_title || '';
   });
@@ -41,6 +55,9 @@ const CustomAuthLayout: React.FC = () => {
         });
         const data = res?.data?.data || res?.data;
         if (mounted && data) {
+          try {
+            localStorage.setItem('nocobase_custom_login_public_config_v2', JSON.stringify(data));
+          } catch (e) {}
           setConfig(data);
         }
       } catch (err) {

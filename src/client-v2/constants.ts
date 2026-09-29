@@ -1,0 +1,1 @@
+export const CUSTOM_LOGIN_PUBLIC_CONFIG_CACHE_KEY = 'nocobase_custom_login_public_config_v2';

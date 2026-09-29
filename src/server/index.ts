@@ -1,6 +1,7 @@
 import { Plugin } from '@nocobase/server';
 import path from 'path';
 import { triggerWorkflowAction } from './actions/trigger-workflow';
+import { getCaptchaAction } from './actions/captcha';
 
 const DEFAULT_PRESET_GRID_SCHEMA = {
   use: 'LoginPageBlockGridModel',
@@ -219,8 +220,12 @@ export class PluginCustomLoginPageServer extends Plugin {
             if (repo) {
               record = await repo.findOne({ filter: { key: 'default' } });
             }
-          } catch (e) {
-            // 数据库未同步或异常时平滑降级为预设配置
+          } catch (err: any) {
+            this.app.logger?.warn?.(`[CustomLoginPage] Failed to read public config: ${err.message}`);
+            // Never replace a working page with defaults during a database outage.
+            ctx.body = this.cachedPublicConfig || { enabled: false };
+            await next();
+            return;
           }
 
           const rawRecord = (record?.toJSON ? record.toJSON() : record) || DEFAULT_CONFIG_VALUES;
@@ -247,11 +252,11 @@ export class PluginCustomLoginPageServer extends Plugin {
           let record: any = null;
           try {
             const repo = this.getRepo();
-            if (repo) {
-              record = await repo.findOne({ filter: { key: 'default' } });
-            }
-          } catch (e) {
-            // 数据库未同步或异常时平滑降级
+            if (!repo) throw new Error('Configuration repository is unavailable');
+            record = await repo.findOne({ filter: { key: 'default' } });
+          } catch (err: any) {
+            this.app.logger?.error?.(`[CustomLoginPage] Failed to read config: ${err.message}`);
+            ctx.throw(503, 'Configuration could not be loaded. Please retry.');
           }
 
           const rawRecord = (record?.toJSON ? record.toJSON() : record) || DEFAULT_CONFIG_VALUES;
@@ -273,20 +278,24 @@ export class PluginCustomLoginPageServer extends Plugin {
 
           try {
             const repo = this.getRepo();
-            if (repo) {
-              const existing = await repo.findOne({ filter: { key: 'default' } });
+            if (!repo) throw new Error('Configuration repository is unavailable');
+            record = await this.db.sequelize.transaction(async (transaction) => {
+              const existing = await repo.findOne({ filter: { key: 'default' }, transaction });
               if (!existing) {
-                record = await repo.create({ values: { ...DEFAULT_CONFIG_VALUES, ...values, key: 'default' } });
-              } else {
-                await repo.update({ filter: { key: 'default' }, values });
-                record = await repo.findOne({ filter: { key: 'default' } });
+                return repo.create({ values: { ...DEFAULT_CONFIG_VALUES, ...values, key: 'default' }, transaction });
               }
-            }
+              await repo.update({ filter: { key: 'default' }, values, transaction });
+              const saved = await repo.findOne({ filter: { key: 'default' }, transaction });
+              if (!saved) throw new Error('Saved configuration could not be read back');
+              return saved;
+            });
+            if (!record) throw new Error('Configuration was not saved');
           } catch (err: any) {
             this.app.logger?.error?.(`[CustomLoginPage] Failed to save config: ${err.message}`);
+            ctx.throw(503, 'Configuration could not be saved. Please retry.');
           }
 
-          const rawRecord = (record?.toJSON ? record.toJSON() : record) || { ...DEFAULT_CONFIG_VALUES, ...values };
+          const rawRecord = record?.toJSON ? record.toJSON() : record;
           const fullConfig = {
             ...rawRecord,
             canvasWidth: rawRecord.canvasWidth || 'wide',
@@ -314,12 +323,14 @@ export class PluginCustomLoginPageServer extends Plugin {
         },
 
         triggerWorkflow: triggerWorkflowAction,
+        getCaptcha: getCaptchaAction,
       },
     });
 
     // 开放 ACL 权限
     this.app.acl.allow('customLoginPage', 'getPublicConfig', 'public');
     this.app.acl.allow('customLoginPage', 'triggerWorkflow', 'public');
+    this.app.acl.allow('customLoginPage', 'getCaptcha', 'public');
     this.app.acl.allow('customLoginPage', 'getConfig', 'allowConfigure');
     this.app.acl.allow('customLoginPage', 'saveConfig', 'allowConfigure');
 

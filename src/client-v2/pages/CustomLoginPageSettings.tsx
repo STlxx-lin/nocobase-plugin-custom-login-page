@@ -20,6 +20,7 @@ import {
   Spin,
   Segmented,
   Tag,
+  Upload,
 } from 'antd';
 import {
   SaveOutlined,
@@ -28,10 +29,17 @@ import {
   EyeOutlined,
   ReloadOutlined,
   AlertOutlined,
+  DownloadOutlined,
+  UploadOutlined,
+  DesktopOutlined,
+  TabletOutlined,
+  MobileOutlined,
 } from '@ant-design/icons';
 import { useApp } from '@nocobase/client-v2';
 import { useFlowEngine } from '@nocobase/flow-engine';
+import { reaction } from '@formily/reactive';
 import { useT } from '../locale';
+import { CUSTOM_LOGIN_PUBLIC_CONFIG_CACHE_KEY } from '../constants';
 import { CustomLoginContainer } from '../components/CustomLoginContainer';
 import { LoginPageBlockGridCanvasRef, DEFAULT_PRESET_GRID_SCHEMA } from '../components/LoginPageBlockGridCanvas';
 import { BlockContentEditorDrawer } from '../components/BlockContentEditorDrawer';
@@ -122,19 +130,47 @@ export const CustomLoginPageSettings: React.FC = () => {
   const { token } = theme.useToken();
   const [form] = Form.useForm();
   const canvasRef = useRef<LoginPageBlockGridCanvasRef>(null);
+  const writePending = useRef(false);
+  const editRevision = useRef(0);
 
   const [config, setConfig] = useState<CustomLoginConfig>(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [switchLoading, setSwitchLoading] = useState(false);
   const [configLoaded, setConfigLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'dirty' | 'error'>('saved');
+  const stopObservingCanvas = useRef<(() => void) | undefined>();
   const [configKey, setConfigKey] = useState(1);
   const [designMode, setDesignMode] = useState(true);
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [viewportMode, setViewportMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
 
   // 区块专属内容编辑抽屉状态 (提升到页面顶层，杜绝嵌套渲染丢失)
   const [blockEditorOpen, setBlockEditorOpen] = useState(false);
   const [editingBlockModel, setEditingBlockModel] = useState<any>(null);
+
+  const markDirty = React.useCallback(() => {
+    editRevision.current += 1;
+    setSaveStatus('dirty');
+  }, []);
+
+  // Track native drag/resize/add/remove operations as well as block property edits.
+  const handleCanvasReady = React.useCallback((model: any) => {
+    stopObservingCanvas.current?.();
+    stopObservingCanvas.current = reaction(() => JSON.stringify(model.serialize()), markDirty);
+  }, [markDirty]);
+  useEffect(() => () => stopObservingCanvas.current?.(), []);
+
+  useEffect(() => {
+    if (saveStatus === 'saved') return;
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warnBeforeUnload);
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload);
+  }, [saveStatus]);
 
   // 监听 open-block-editor 事件，在顶层稳定弹出抽屉
   useEffect(() => {
@@ -168,11 +204,14 @@ export const CustomLoginPageSettings: React.FC = () => {
   // 加载服务端配置
   const fetchConfig = async () => {
     setLoading(true);
+    setLoadError(false);
+    setConfigLoaded(false);
     try {
       const res = await app.apiClient.request({
         url: 'customLoginPage:getConfig',
       });
       const data = res?.data?.data || res?.data;
+      if (!data || typeof data.enabled !== 'boolean') throw new Error('Invalid configuration response');
       if (data) {
         const parsedGridSchema = safeParseJson(data.gridSchema, DEFAULT_PRESET_GRID_SCHEMA);
         const parsedThemeConfig = safeParseJson(data.themeConfig, DEFAULT_CONFIG.themeConfig);
@@ -193,12 +232,13 @@ export const CustomLoginPageSettings: React.FC = () => {
         setConfig(merged);
         form.setFieldsValue(merged);
         setConfigKey((k) => k + 1);
+        setSaveStatus('saved');
+        setConfigLoaded(true);
       }
     } catch (err: any) {
-      console.warn('获取自定义登录页配置失败，使用默认配置', err);
+      setLoadError(true);
     } finally {
       setLoading(false);
-      setConfigLoaded(true);
     }
   };
 
@@ -221,44 +261,50 @@ export const CustomLoginPageSettings: React.FC = () => {
 
   // 切换自定义登录页是否全局生效（自动持久化并给出即时反馈）
   const handleToggleEnabled = async (checked: boolean) => {
+    if (!configLoaded || writePending.current) return;
+    writePending.current = true;
     setSwitchLoading(true);
-    const updatedConfig: CustomLoginConfig = {
-      ...config,
-      enabled: checked,
-    };
-    setConfig(updatedConfig);
-    form.setFieldsValue({ enabled: checked });
 
     try {
       await app.apiClient.request({
         url: 'customLoginPage:saveConfig',
         method: 'post',
-        data: updatedConfig,
+        data: { enabled: checked },
       });
+      setConfig((current) => {
+        const next = { ...current, enabled: checked };
+        try {
+          localStorage.setItem(CUSTOM_LOGIN_PUBLIC_CONFIG_CACHE_KEY, JSON.stringify(next));
+        } catch (e) {}
+        return next;
+      });
+      form.setFieldsValue({ enabled: checked });
       if (checked) {
         message.success(t('Custom login page is now enabled and in effect!'));
       } else {
         message.warning(t('Custom login page is disabled. Front-end will display native login page.'));
       }
     } catch (err: any) {
-      setConfig(config);
-      form.setFieldsValue({ enabled: config.enabled });
       message.error(err?.response?.data?.message || err?.message || t('Failed to update status'));
     } finally {
+      writePending.current = false;
       setSwitchLoading(false);
     }
   };
 
   // 保存全局配置
   const handleSaveGlobalConfig = async () => {
+    if (writePending.current) return;
     if (!configLoaded) {
       message.warning(t('Configuration is loading, please wait before saving'));
       return;
     }
+    writePending.current = true;
     setSaving(true);
     try {
-      const formValues = await form.validateFields().catch(() => ({}));
+      const formValues = drawerVisible ? await form.validateFields() : {};
       const serializedGrid = canvasRef.current?.serialize?.();
+      if (!serializedGrid) throw new Error(t('Canvas is not ready. Please retry.'));
 
       const payload: CustomLoginConfig = {
         ...config,
@@ -270,24 +316,95 @@ export const CustomLoginPageSettings: React.FC = () => {
         },
       };
 
+      const revision = editRevision.current;
+      // The enable switch has its own partial save; appearance saves must not undo it.
+      const { enabled: _enabled, ...appearance } = payload;
       await app.apiClient.request({
         url: 'customLoginPage:saveConfig',
         method: 'post',
-        data: payload,
+        data: appearance,
       });
 
-      setConfig(payload);
+      // 同步刷新本地 SWR 缓存
+      try {
+        localStorage.setItem(CUSTOM_LOGIN_PUBLIC_CONFIG_CACHE_KEY, JSON.stringify(payload));
+      } catch (e) {}
+
+      // Edits made while the request was in flight must remain visible and unsaved.
+      setSaveStatus(editRevision.current === revision ? 'saved' : 'dirty');
       message.success(t('Configuration saved successfully'));
-      setDrawerVisible(false);
+      if (editRevision.current === revision) setDrawerVisible(false);
     } catch (err: any) {
+      setSaveStatus('error');
       message.error(err?.response?.data?.message || err?.message || t('Failed to save configuration'));
     } finally {
+      writePending.current = false;
       setSaving(false);
     }
   };
 
+  // 导出配置文件
+  const handleExportConfig = () => {
+    try {
+      const serializedGrid = canvasRef.current?.serialize?.() || config.gridSchema || DEFAULT_PRESET_GRID_SCHEMA;
+      const exportData = {
+        name: 'NocoBase Custom Login Page Config',
+        version: '1.0',
+        exportedAt: new Date().toISOString(),
+        config: {
+          ...config,
+          gridSchema: serializedGrid,
+        },
+      };
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `custom-login-page-config-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      message.success(t('Configuration exported successfully'));
+    } catch (err: any) {
+      message.error(t('Failed to export configuration'));
+    }
+  };
+
+  // 导入配置文件
+  const handleImportConfig = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const parsed = JSON.parse(content);
+        const importedConfig = parsed.config || parsed;
+        if (!importedConfig || typeof importedConfig !== 'object') {
+          throw new Error('Invalid config format');
+        }
+        const newConfig: CustomLoginConfig = {
+          ...config,
+          ...importedConfig,
+          gridSchema: importedConfig.gridSchema || config.gridSchema || DEFAULT_PRESET_GRID_SCHEMA,
+          themeConfig: {
+            ...config.themeConfig,
+            ...(importedConfig.themeConfig || {}),
+          },
+        };
+        setConfig(newConfig);
+        form.setFieldsValue(newConfig);
+        setConfigKey((k) => k + 1);
+        markDirty();
+        message.success(t('Configuration imported successfully into preview. Click "Save global config" to take effect.'));
+      } catch (err: any) {
+        message.error(t('Invalid configuration file. Please provide a valid JSON export.'));
+      }
+    };
+    reader.readAsText(file);
+    return false;
+  };
+
   // 切换容器质感风格
   const handleContainerStyleChange = (containerStyle: ContainerStyle) => {
+    markDirty();
     const updated = { ...config, containerStyle };
     setConfig(updated);
     form.setFieldsValue({ containerStyle });
@@ -295,6 +412,7 @@ export const CustomLoginPageSettings: React.FC = () => {
 
   // 切换画幅宽度
   const handleWidthChange = (canvasWidth: CanvasWidthMode) => {
+    markDirty();
     const updated = { ...config, canvasWidth };
     setConfig(updated);
     form.setFieldsValue({ canvasWidth });
@@ -302,6 +420,7 @@ export const CustomLoginPageSettings: React.FC = () => {
 
   // 应用精选主题预设
   const handleApplyPresetTheme = (preset: typeof THEME_PRESETS[0]) => {
+    markDirty();
     const updated: CustomLoginConfig = {
       ...config,
       containerStyle: preset.container,
@@ -324,22 +443,15 @@ export const CustomLoginPageSettings: React.FC = () => {
 
   // 重置为经典双列预设区块
   const handleResetPreset = async () => {
+    if (!configLoaded || writePending.current) return;
     const resetConfig = {
       ...config,
       gridSchema: DEFAULT_PRESET_GRID_SCHEMA,
     };
     setConfig(resetConfig);
-    try {
-      await app.apiClient.request({
-        url: 'customLoginPage:saveConfig',
-        method: 'post',
-        data: resetConfig,
-      });
-      message.success(t('Restored to classic native block preset!'));
-      window.location.reload();
-    } catch (e) {
-      message.error(t('Failed to reset'));
-    }
+    setConfigKey((key) => key + 1);
+    markDirty();
+    message.info(t('Preset restored in preview. Save global config to apply.'));
   };
 
   return (
@@ -389,6 +501,7 @@ export const CustomLoginPageSettings: React.FC = () => {
               <Switch
                 checked={config.enabled}
                 loading={switchLoading}
+                disabled={!configLoaded || saving}
                 onChange={handleToggleEnabled}
                 checkedChildren={t('In effect')}
                 unCheckedChildren={t('Disabled')}
@@ -436,16 +549,29 @@ export const CustomLoginPageSettings: React.FC = () => {
               okText={t('Confirm reset')}
               cancelText={t('Cancel')}
             >
-              <Button type="text" size="small" icon={<ReloadOutlined />} style={{ color: '#64748b' }}>
+              <Button disabled={!configLoaded || saving || switchLoading} type="text" size="small" icon={<ReloadOutlined />} style={{ color: '#64748b' }}>
                 {t('Reset preset layout')}
               </Button>
             </Popconfirm>
           </div>
 
-          {/* 右侧：外观配置、新窗口预览、保存全局配置 */}
+          {/* 右侧：导入导出、外观配置、新窗口预览、保存全局配置 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Upload beforeUpload={handleImportConfig} accept=".json" showUploadList={false}>
+              <Tooltip title={t('Import page configuration from a JSON file')}>
+                <Button icon={<UploadOutlined />} disabled={!configLoaded || saving} style={{ borderRadius: 6 }}>
+                  {t('Import')}
+                </Button>
+              </Tooltip>
+            </Upload>
+            <Tooltip title={t('Export current page layout and theme configuration as JSON')}>
+              <Button icon={<DownloadOutlined />} disabled={!configLoaded} onClick={handleExportConfig} style={{ borderRadius: 6 }}>
+                {t('Export')}
+              </Button>
+            </Tooltip>
             <Button
               icon={<BgColorsOutlined />}
+              disabled={!configLoaded}
               onClick={() => setDrawerVisible(true)}
               style={{ borderRadius: 6 }}
             >
@@ -462,11 +588,15 @@ export const CustomLoginPageSettings: React.FC = () => {
               type="primary"
               icon={<SaveOutlined />}
               loading={saving}
+              disabled={!configLoaded || switchLoading}
               onClick={handleSaveGlobalConfig}
               style={{ borderRadius: 6, boxShadow: '0 2px 6px rgba(22, 119, 255, 0.3)' }}
             >
               {t('Save global config')}
             </Button>
+            <Tag aria-live="polite" color={saving ? 'processing' : saveStatus === 'error' ? 'error' : saveStatus === 'dirty' ? 'warning' : 'success'}>
+              {t(!configLoaded ? 'Configuration not loaded' : saving ? 'Saving...' : saveStatus === 'dirty' ? 'Unsaved changes' : saveStatus === 'error' ? 'Save failed. Please retry.' : 'Saved')}
+            </Tag>
           </div>
         </div>
 
@@ -489,6 +619,7 @@ export const CustomLoginPageSettings: React.FC = () => {
               </span>
               <Segmented
                 value={config.canvasWidth || 'wide'}
+                disabled={!configLoaded}
                 onChange={(val) => handleWidthChange(val as CanvasWidthMode)}
                 options={[
                   { label: t('Standard (1160px)'), value: 'standard' },
@@ -504,12 +635,52 @@ export const CustomLoginPageSettings: React.FC = () => {
               </span>
               <Segmented
                 value={config.containerStyle || 'transparent'}
+                disabled={!configLoaded}
                 onChange={(val) => handleContainerStyleChange(val as ContainerStyle)}
                 options={[
                   { label: t('Transparent (Recommended)'), value: 'transparent' },
                   { label: t('Modern frosted glass'), value: 'glass' },
                   { label: t('Classic white card'), value: 'card' },
                   { label: t('Obsidian dark card'), value: 'dark-card' },
+                ]}
+              />
+            </div>
+
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>
+                {t('Device viewport:')}
+              </span>
+              <Segmented
+                value={viewportMode}
+                onChange={(val) => setViewportMode(val as any)}
+                options={[
+                  {
+                    label: (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <DesktopOutlined />
+                        {t('Desktop (100%)')}
+                      </span>
+                    ),
+                    value: 'desktop',
+                  },
+                  {
+                    label: (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <TabletOutlined />
+                        {t('Tablet (768px)')}
+                      </span>
+                    ),
+                    value: 'tablet',
+                  },
+                  {
+                    label: (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <MobileOutlined />
+                        {t('Mobile (375px)')}
+                      </span>
+                    ),
+                    value: 'mobile',
+                  },
                 ]}
               />
             </div>
@@ -603,6 +774,7 @@ export const CustomLoginPageSettings: React.FC = () => {
                 type="primary"
                 size="small"
                 loading={switchLoading}
+                disabled={!configLoaded || saving}
                 onClick={() => handleToggleEnabled(true)}
                 style={{ borderRadius: 6, background: '#fa8c16', borderColor: '#fa8c16' }}
               >
@@ -617,18 +789,34 @@ export const CustomLoginPageSettings: React.FC = () => {
       <div
         style={{
           border: `1px solid ${token.colorBorderSecondary}`,
-          borderRadius: 16,
+          borderRadius: viewportMode === 'mobile' ? 32 : viewportMode === 'tablet' ? 24 : 16,
           overflow: 'hidden',
-          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.08)',
           backgroundColor: '#0f172a',
           position: 'relative',
           minHeight: 460,
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
+          transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+          width: viewportMode === 'mobile' ? '375px' : viewportMode === 'tablet' ? '768px' : '100%',
+          maxWidth: '100%',
+          margin: viewportMode === 'desktop' ? '0' : '24px auto',
+          boxShadow:
+            viewportMode === 'mobile'
+              ? '0 0 0 12px #1e293b, 0 25px 60px rgba(0, 0, 0, 0.5)'
+              : viewportMode === 'tablet'
+              ? '0 0 0 10px #1e293b, 0 20px 50px rgba(0, 0, 0, 0.45)'
+              : '0 8px 30px rgba(0, 0, 0, 0.08)',
         }}
       >
-        {!configLoaded ? (
+        {loadError ? (
+          <Alert
+            type="error"
+            showIcon
+            message={t('Failed to load configuration. Editing is disabled to protect your saved page.')}
+            action={<Button onClick={fetchConfig} loading={loading}>{t('Retry')}</Button>}
+          />
+        ) : !configLoaded ? (
           <div style={{ padding: '120px 0', textAlign: 'center' }}>
             <Spin tip={t('Syncing latest blocks and style configuration from database...')} size="large" />
           </div>
@@ -638,6 +826,7 @@ export const CustomLoginPageSettings: React.FC = () => {
             ref={canvasRef}
             config={config}
             designMode={designMode}
+            onModelReady={handleCanvasReady}
           />
         )}
       </div>
@@ -649,7 +838,7 @@ export const CustomLoginPageSettings: React.FC = () => {
         onClose={() => setDrawerVisible(false)}
         width={520}
         extra={
-          <Button type="primary" onClick={handleSaveGlobalConfig} loading={saving}>
+          <Button type="primary" onClick={handleSaveGlobalConfig} loading={saving} disabled={!configLoaded || switchLoading}>
             {t('Confirm & Save')}
           </Button>
         }
@@ -705,6 +894,7 @@ export const CustomLoginPageSettings: React.FC = () => {
           layout="vertical"
           initialValues={config}
           onValuesChange={(_, allValues) => {
+            markDirty();
             setConfig((prev) => ({
               ...prev,
               ...allValues,
@@ -715,10 +905,6 @@ export const CustomLoginPageSettings: React.FC = () => {
             }));
           }}
         >
-          <Form.Item name="enabled" label={t('Enable custom sign-in page')} valuePropName="checked">
-            <Switch />
-          </Form.Item>
-
           <Form.Item name="canvasWidth" label={t('Canvas width mode')}>
             <Select
               options={[
@@ -792,6 +978,7 @@ export const CustomLoginPageSettings: React.FC = () => {
         onClose={() => setBlockEditorOpen(false)}
         model={editingBlockModel}
         onSave={() => {
+          markDirty();
           canvasRef.current?.refresh?.();
         }}
       />

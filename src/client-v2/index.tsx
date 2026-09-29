@@ -3,6 +3,21 @@ import { Plugin, useApp } from '@nocobase/client-v2';
 import { CustomLoginContainer } from './components/CustomLoginContainer';
 import { CustomLoginConfig } from './types';
 import { useT } from './locale';
+import { CUSTOM_LOGIN_PUBLIC_CONFIG_CACHE_KEY } from './constants';
+export { CUSTOM_LOGIN_PUBLIC_CONFIG_CACHE_KEY };
+
+const getInitialCachedConfig = (): { config: CustomLoginConfig | null; hasCached: boolean } => {
+  if (typeof window === 'undefined') return { config: null, hasCached: false };
+  try {
+    const raw = localStorage.getItem(CUSTOM_LOGIN_PUBLIC_CONFIG_CACHE_KEY);
+    if (!raw) return { config: null, hasCached: false };
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      return { config: parsed, hasCached: true };
+    }
+  } catch (e) {}
+  return { config: null, hasCached: false };
+};
 
 // 登录页包装组件
 const EnhancedSignInPage: React.FC<{ originalSignInPage: React.ComponentType }> = ({
@@ -10,8 +25,9 @@ const EnhancedSignInPage: React.FC<{ originalSignInPage: React.ComponentType }> 
 }) => {
   const t = useT();
   const app = useApp();
-  const [config, setConfig] = useState<CustomLoginConfig | null>(null);
-  const [loading, setLoading] = useState(true);
+  const initialCache = React.useMemo(() => getInitialCachedConfig(), []);
+  const [config, setConfig] = useState<CustomLoginConfig | null>(initialCache.config);
+  const [loading, setLoading] = useState(!initialCache.hasCached);
 
   const safeParseJson = (val: any, fallback: any) => {
     if (!val) return fallback;
@@ -67,6 +83,12 @@ const EnhancedSignInPage: React.FC<{ originalSignInPage: React.ComponentType }> 
             gridSchema: safeParseJson(data.gridSchema, null),
             themeConfig: safeParseJson(data.themeConfig, {}),
           };
+
+          // SWR 写入最新配置缓存
+          try {
+            localStorage.setItem(CUSTOM_LOGIN_PUBLIC_CONFIG_CACHE_KEY, JSON.stringify(formattedConfig));
+          } catch (e) {}
+
           setConfig(formattedConfig);
         }
       } catch (err) {
@@ -82,11 +104,28 @@ const EnhancedSignInPage: React.FC<{ originalSignInPage: React.ComponentType }> 
     };
   }, [app]);
 
-  // 加载中占位，避免原生登录页闪烁与 320px 容器跳动
+  // 加载中占位（仅首次无任何本地缓存时显示柔和居中指示，避免硬编码深蓝全屏导致的闪烁）
   if (loading) {
     return (
-      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a192f' }}>
-        <div style={{ color: '#fff', fontSize: 16 }}>{t('Loading sign-in page...')}</div>
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100vh',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'rgba(255, 255, 255, 0.6)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
+      >
+        <div style={{ color: '#475569', fontSize: 15, fontWeight: 500 }}>{t('Loading sign-in page...')}</div>
       </div>
     );
   }

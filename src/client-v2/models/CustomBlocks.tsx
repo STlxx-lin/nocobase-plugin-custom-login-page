@@ -2,7 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { BlockModel, Icon } from '@nocobase/client-v2';
 import { openBlockContentEditor } from '../components/BlockContentEditorDrawer';
 import { tExpr, useT } from '../locale';
-import { Carousel, Row, Col, Typography, Tag, Card, Form, Input, Button, Space, Divider, Alert, Segmented, Select, Statistic, Image, Tooltip, message, QRCode } from 'antd';
+import { sanitizeHtml } from '../utils/sanitizeHtml';
+export { sanitizeHtml } from '../utils/sanitizeHtml';
+import { Carousel, Row, Col, Typography, Tag, Card, Form, Input, Button, Space, Divider, Alert, Segmented, Select, Statistic, Image, Tooltip, message, QRCode, ConfigProvider, theme as antdTheme } from 'antd';
 import {
   UserOutlined,
   LockOutlined,
@@ -353,22 +355,35 @@ export const NativeSignInRenderer: React.FC<{ model: any; theme?: any }> = ({ mo
   // 1. 如果是在前台真实访问（非后台设计态），且系统原生登录组件就绪，直接渲染官方原生组件！
   if (!isDesignMode && OriginalSignIn) {
     return (
-      <div className="nocobase-native-signin-embed" style={{ width: '100%' }}>
-        <OriginalSignIn />
-        {showAgreement && agreementText && (
-          <div
-            style={{
-              marginTop: 16,
-              textAlign: 'center',
-              fontSize: 12,
-              color: props.agreementColor || theme?.agreementColor || '#9ca3af',
-              lineHeight: 1.5,
-            }}
-          >
-            {agreementText}
-          </div>
-        )}
-      </div>
+      <ConfigProvider
+        theme={{
+          algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+          token: {
+            colorPrimary: buttonColor || '#1677ff',
+            colorBgContainer: isDark ? 'rgba(30, 41, 59, 0.75)' : '#ffffff',
+            colorText: isDark ? '#ffffff' : undefined,
+            colorTextSecondary: isDark ? 'rgba(255, 255, 255, 0.65)' : undefined,
+            colorBorder: isDark ? 'rgba(255, 255, 255, 0.18)' : undefined,
+          },
+        }}
+      >
+        <div className="nocobase-native-signin-embed" style={{ width: '100%' }}>
+          <OriginalSignIn />
+          {showAgreement && agreementText && (
+            <div
+              style={{
+                marginTop: 16,
+                textAlign: 'center',
+                fontSize: 12,
+                color: props.agreementColor || theme?.agreementColor || (isDark ? 'rgba(255, 255, 255, 0.5)' : '#9ca3af'),
+                lineHeight: 1.5,
+              }}
+            >
+              {agreementText}
+            </div>
+          )}
+        </div>
+      </ConfigProvider>
     );
   }
 
@@ -1175,22 +1190,6 @@ CustomCarouselBlockModel.define({
 /* ==========================================================================
    6. 自由代码 / HTML 原生区块 (CustomHtmlBlockModel)
    ========================================================================== */
-// XSS 安全过滤清洗器：有效阻断恶意脚本注入与内联事件劫持，同时放行合规展示样式与结构
-export const sanitizeHtml = (html: string): string => {
-  if (!html || typeof html !== 'string') return '';
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
-    .replace(/<embed\b[^>]*>/gi, '')
-    .replace(/<meta\b[^>]*>/gi, '')
-    .replace(/<link\b[^>]*>/gi, '')
-    .replace(/\s+on[a-z]+\s*=\s*(['"]).*?\1/gi, '')
-    .replace(/\s+on[a-z]+\s*=\s*[^>\s]+/gi, '')
-    .replace(/(href|src)\s*=\s*(['"])\s*javascript:[^'"]*\2/gi, '$1="#"')
-    .replace(/(href|src)\s*=\s*javascript:[^>\s]+/gi, '$1="#"');
-};
-
 export class CustomHtmlBlockModel extends CustomLoginBlockModel {
   renderComponent(): React.ReactNode {
     const props = (this as any).props || {};
@@ -3054,4 +3053,3 @@ const ALL_CUSTOM_BLOCK_MODELS = [
   CustomLanguageBlockModel,
   CustomCountdownBlockModel,
 ];
-

@@ -27,7 +27,12 @@
       "2.x"
     ]
   },
+  "dependencies": {
+    "dompurify": "^3.4.16"
+  },
   "peerDependencies": {
+    "@ant-design/icons": ">=5.0.0",
+    "@formily/reactive": "2.x",
     "@nocobase/actions": ">=2.2.0",
     "@nocobase/client": ">=2.2.0",
     "@nocobase/client-v2": ">=2.2.0",
@@ -38,7 +43,6 @@
     "@nocobase/server": ">=2.2.0",
     "@nocobase/utils": ">=2.2.0",
     "antd": ">=5.0.0",
-    "@ant-design/icons": ">=5.0.0",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0"
   },
