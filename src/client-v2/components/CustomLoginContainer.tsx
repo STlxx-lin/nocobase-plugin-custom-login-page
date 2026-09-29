@@ -378,8 +378,35 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
       (window.location.pathname.includes('/signin') && !window.location.pathname.includes('/settings/'))
     );
 
+    const rootRef = React.useRef<HTMLDivElement>(null);
+
+    // 运行时 DOM 破壁兜底（Runtime DOM Booster）
+    // 兼容老旧 Chromium (< 105) 及信创系统等不支持 CSS :has() 的环境，自动遍历祖先并注入覆盖样式，卸载时干净重置
+    React.useEffect(() => {
+      if (!isActualSignInRoute || typeof document === 'undefined') return;
+
+      const modifiedElements: HTMLElement[] = [];
+      let curr = rootRef.current?.parentElement;
+
+      while (curr && curr !== document.body && curr !== document.documentElement) {
+        curr.classList.add('nb-custom-login-parent-override');
+        modifiedElements.push(curr);
+        curr = curr.parentElement;
+      }
+
+      document.body.classList.add('nb-custom-login-body-override');
+
+      return () => {
+        for (const el of modifiedElements) {
+          el.classList.remove('nb-custom-login-parent-override');
+        }
+        document.body.classList.remove('nb-custom-login-body-override');
+      };
+    }, [isActualSignInRoute]);
+
     return (
       <div
+        ref={rootRef}
         className={`custom-login-page-root custom-login-style-${containerStyle} ${designMode ? 'is-design-mode' : 'is-preview-mode'} ${isActualSignInRoute ? 'is-actual-signin-route' : 'is-settings-canvas-route'}`}
         style={{
           minHeight: isActualSignInRoute ? '100vh' : '460px',
@@ -400,6 +427,20 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
       >
         {/* 全局 Markdown 及区块穿透样式：彻底解决卡片白底冲突与父级 320px 挤压问题 */}
         <style>{`
+          /* 运行时 DOM 破壁兜底：保障老旧终端和信创浏览器不受 320px 宽度限制 */
+          body.nb-custom-login-body-override {
+            overflow: hidden !important;
+          }
+          .nb-custom-login-parent-override {
+            max-width: 100% !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .nb-custom-login-parent-override > h1 {
+            display: none !important;
+          }
+
           /* 仅在前台实际登录路由下穿透重置父级容器，全屏铺展，绝不污染后台管理界面 */
           .custom-login-page-root.is-actual-signin-route {
             position: fixed !important;

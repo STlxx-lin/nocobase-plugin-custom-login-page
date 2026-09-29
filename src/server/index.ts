@@ -114,7 +114,9 @@ const DEFAULT_CONFIG_VALUES = {
   },
 };
 
-export { DEFAULT_PRESET_GRID_SCHEMA, DEFAULT_CONFIG_VALUES };
+const PUBLIC_CONFIG_CACHE_KEY = 'custom_login:public_config';
+
+export { DEFAULT_PRESET_GRID_SCHEMA, DEFAULT_CONFIG_VALUES, PUBLIC_CONFIG_CACHE_KEY };
 
 const ALLOWED_CONFIG_KEYS = [
   'enabled',
@@ -174,6 +176,59 @@ export class PluginCustomLoginPageServer extends Plugin {
   private lastCacheTime = 0;
   private readonly CACHE_TTL_MS = 60000;
 
+  /**
+   * 优先从分布式缓存（Redis/app.cache）读取，未命中则读取本地内存缓存
+   */
+  async getPublicConfigFromCache(): Promise<any> {
+    if ((this.app as any)?.cache?.get) {
+      try {
+        const cached = await (this.app as any).cache.get(PUBLIC_CONFIG_CACHE_KEY);
+        if (cached) {
+          return cached;
+        }
+      } catch (err: any) {
+        this.app.logger?.warn?.(`[CustomLoginPage] Distributed cache read failed, fallback to memory: ${err.message}`);
+      }
+    }
+    const now = Date.now();
+    if (this.cachedPublicConfig && now - this.lastCacheTime < this.CACHE_TTL_MS) {
+      return this.cachedPublicConfig;
+    }
+    return null;
+  }
+
+  /**
+   * 同步写入分布式缓存（Redis）及本地内存，保障 K8s 多 Pod 节点毫秒级同步
+   */
+  async setPublicConfigCache(config: any): Promise<void> {
+    this.cachedPublicConfig = config;
+    this.lastCacheTime = Date.now();
+
+    if ((this.app as any)?.cache?.set) {
+      try {
+        await (this.app as any).cache.set(PUBLIC_CONFIG_CACHE_KEY, config, this.CACHE_TTL_MS);
+      } catch (err: any) {
+        this.app.logger?.warn?.(`[CustomLoginPage] Distributed cache write failed: ${err.message}`);
+      }
+    }
+  }
+
+  /**
+   * 清除分布式及本地缓存
+   */
+  async clearPublicConfigCache(): Promise<void> {
+    this.cachedPublicConfig = null;
+    this.lastCacheTime = 0;
+
+    if ((this.app as any)?.cache?.del) {
+      try {
+        await (this.app as any).cache.del(PUBLIC_CONFIG_CACHE_KEY);
+      } catch (err: any) {
+        this.app.logger?.warn?.(`[CustomLoginPage] Distributed cache del failed: ${err.message}`);
+      }
+    }
+  }
+
   async afterAdd() {}
 
   async beforeLoad() {
@@ -207,9 +262,9 @@ export class PluginCustomLoginPageServer extends Plugin {
       name: 'customLoginPage',
       actions: {
         getPublicConfig: async (ctx, next) => {
-          const now = Date.now();
-          if (this.cachedPublicConfig && now - this.lastCacheTime < this.CACHE_TTL_MS) {
-            ctx.body = this.cachedPublicConfig;
+          const cached = await this.getPublicConfigFromCache();
+          if (cached) {
+            ctx.body = cached;
             await next();
             return;
           }
@@ -242,8 +297,7 @@ export class PluginCustomLoginPageServer extends Plugin {
             gridSchema: safeParse(rawRecord.gridSchema, DEFAULT_PRESET_GRID_SCHEMA),
           };
 
-          this.cachedPublicConfig = publicConfig;
-          this.lastCacheTime = now;
+          await this.setPublicConfigCache(publicConfig);
           ctx.body = publicConfig;
           await next();
         },
@@ -304,8 +358,7 @@ export class PluginCustomLoginPageServer extends Plugin {
             gridSchema: safeParse(rawRecord.gridSchema, DEFAULT_PRESET_GRID_SCHEMA),
           };
 
-          // 立即更新内存缓存，使公网前台即刻生效，无需等待 TTL
-          this.cachedPublicConfig = {
+          const publicConfig = {
             enabled: fullConfig.enabled ?? true,
             template: fullConfig.template || 'split',
             canvasWidth: fullConfig.canvasWidth || 'wide',
@@ -316,7 +369,9 @@ export class PluginCustomLoginPageServer extends Plugin {
             customBlocks: fullConfig.customBlocks,
             gridSchema: fullConfig.gridSchema,
           };
-          this.lastCacheTime = Date.now();
+
+          // 立即同步更新分布式缓存（Redis）及本地内存，使所有 Pod 实例即刻生效
+          await this.setPublicConfigCache(publicConfig);
 
           ctx.body = fullConfig;
           await next();
