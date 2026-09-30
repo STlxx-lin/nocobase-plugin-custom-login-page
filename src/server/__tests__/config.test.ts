@@ -144,5 +144,88 @@ describe('configuration persistence and last good cache', () => {
       );
     });
   });
+
+  describe('mobile independent layout persistence & schema auto-healing', () => {
+    it('persists mobile columns with strict boolean coercion and sets Cache-Control', async () => {
+      const savedMobile = {
+        ...oldConfig,
+        enableMobileCustom: true,
+        mobileGridSchema: { use: 'mobile-layout' },
+        enableMobileTheme: true,
+        mobileContainerStyle: 'card',
+      };
+      repo.findOne.mockResolvedValueOnce(oldConfig).mockResolvedValueOnce(savedMobile);
+
+      const ctx = context({
+        enableMobileCustom: 1, // should be coerced to true
+        mobileGridSchema: { use: 'mobile-layout' },
+        enableMobileTheme: 'true', // should be coerced to true
+        mobileContainerStyle: 'card',
+      });
+      await actions.saveConfig(ctx, vi.fn());
+
+      expect(repo.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          values: expect.objectContaining({
+            enableMobileCustom: true,
+            enableMobileTheme: true,
+            mobileContainerStyle: 'card',
+          }),
+        })
+      );
+      expect(ctx.body.enableMobileCustom).toBe(true);
+
+      // Verify getPublicConfig sets Cache-Control header and serves boolean
+      const publicCtx: any = {
+        set: vi.fn(),
+        body: undefined,
+      };
+      plugin.cachedPublicConfig = null;
+      plugin.lastCacheTime = 0;
+      repo.findOne.mockResolvedValueOnce({
+        ...savedMobile,
+        enableMobileCustom: 1, // simulates raw SQLite integer 1
+      });
+      await actions.getPublicConfig(publicCtx, vi.fn());
+      expect(publicCtx.set).toHaveBeenCalledWith('Cache-Control', 'no-cache, no-store, must-revalidate');
+      expect(publicCtx.body.enableMobileCustom).toBe(true);
+    });
+
+    it('auto-heals schema by calling addColumn when table exists but lacks columns', async () => {
+      const addColumn = vi.fn().mockResolvedValue(undefined);
+      const queryInterface = {
+        showAllTables: vi.fn().mockResolvedValue(['custom_login_configs']),
+        describeTable: vi.fn().mockResolvedValue({
+          id: {},
+          key: {},
+          enabled: {},
+        }), // missing all 5 mobile columns
+        addColumn,
+      };
+
+      plugin.db = {
+        getRepository: () => repo,
+        Sequelize: {
+          BOOLEAN: 'BOOLEAN',
+          TEXT: 'TEXT',
+          STRING: () => 'VARCHAR(255)',
+        },
+        sequelize: {
+          getQueryInterface: () => queryInterface,
+          transaction,
+        },
+      };
+
+      await plugin.autoHealSchema();
+
+      expect(addColumn).toHaveBeenCalledTimes(5);
+      expect(addColumn).toHaveBeenCalledWith('custom_login_configs', 'enableMobileCustom', expect.any(Object));
+      expect(addColumn).toHaveBeenCalledWith('custom_login_configs', 'mobileGridSchema', expect.any(Object));
+      expect(addColumn).toHaveBeenCalledWith('custom_login_configs', 'enableMobileTheme', expect.any(Object));
+      expect(addColumn).toHaveBeenCalledWith('custom_login_configs', 'mobileThemeConfig', expect.any(Object));
+      expect(addColumn).toHaveBeenCalledWith('custom_login_configs', 'mobileContainerStyle', expect.any(Object));
+    });
+  });
 });
+
 

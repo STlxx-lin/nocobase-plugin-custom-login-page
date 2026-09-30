@@ -1,4 +1,5 @@
 import { Plugin } from '@nocobase/server';
+import { DataTypes } from '@nocobase/database';
 import path from 'path';
 import { triggerWorkflowAction } from './actions/trigger-workflow';
 import { getCaptchaAction } from './actions/captcha';
@@ -210,6 +211,12 @@ const sanitizeConfigValues = (input: any) => {
       sanitized.mobileContainerStyle = 'transparent';
     }
   }
+  if ('enableMobileCustom' in sanitized) {
+    sanitized.enableMobileCustom = Boolean(sanitized.enableMobileCustom);
+  }
+  if ('enableMobileTheme' in sanitized) {
+    sanitized.enableMobileTheme = Boolean(sanitized.enableMobileTheme);
+  }
   return sanitized;
 };
 
@@ -312,12 +319,56 @@ export class PluginCustomLoginPageServer extends Plugin {
     return this.db.getRepository('custom_login_configs');
   }
 
+  /**
+   * 自动自愈式表结构校验与无感迁移：
+   * 运行时检查并动态补齐移动端专属 5 个字段，避免因旧表结构缺失抛出 SQL 异常
+   */
+  async autoHealSchema(): Promise<void> {
+    try {
+      const queryInterface = this.db?.sequelize?.getQueryInterface?.();
+      if (!queryInterface) return;
+      const tableName = 'custom_login_configs';
+      const tables = await queryInterface.showAllTables();
+      const tableExists = tables.some((t: any) => {
+        const name = typeof t === 'string' ? t : t?.tableName;
+        return name === tableName || name?.toLowerCase() === tableName.toLowerCase();
+      });
+      if (!tableExists) return;
+
+      const description = await queryInterface.describeTable(tableName);
+      const columnsToAdd = [
+        { name: 'enableMobileCustom', type: DataTypes.BOOLEAN, options: { defaultValue: false } },
+        { name: 'mobileGridSchema', type: DataTypes.TEXT, options: { allowNull: true } },
+        { name: 'enableMobileTheme', type: DataTypes.BOOLEAN, options: { defaultValue: false } },
+        { name: 'mobileThemeConfig', type: DataTypes.TEXT, options: { defaultValue: '{}' } },
+        { name: 'mobileContainerStyle', type: DataTypes.STRING(255), options: { defaultValue: 'transparent' } },
+      ];
+
+      for (const col of columnsToAdd) {
+        if (!description[col.name]) {
+          this.app.logger?.info?.(`[CustomLoginPage] Auto-healing schema: adding missing column ${col.name} to ${tableName}`);
+          await queryInterface.addColumn(tableName, col.name, {
+            type: col.type,
+            ...col.options,
+          });
+        }
+      }
+    } catch (err: any) {
+      this.app.logger?.warn?.(`[CustomLoginPage] Auto-healing schema check skipped/failed: ${err.message}`);
+    }
+  }
+
   async load() {
+    // 启动时自动执行表结构自愈检测
+    await this.autoHealSchema();
+
     // 注册资源
     this.app.resource({
       name: 'customLoginPage',
       actions: {
         getPublicConfig: async (ctx, next) => {
+          ctx.set?.('Cache-Control', 'no-cache, no-store, must-revalidate');
+
           const cached = await this.getPublicConfigFromCache();
           if (cached) {
             ctx.body = cached;
@@ -351,9 +402,9 @@ export class PluginCustomLoginPageServer extends Plugin {
             themeConfig: safeParse(rawRecord.themeConfig, DEFAULT_CONFIG_VALUES.themeConfig),
             customBlocks: safeParse(rawRecord.customBlocks, []),
             gridSchema: safeParse(rawRecord.gridSchema, DEFAULT_PRESET_GRID_SCHEMA),
-            enableMobileCustom: rawRecord.enableMobileCustom ?? false,
+            enableMobileCustom: Boolean(rawRecord.enableMobileCustom),
             mobileGridSchema: safeParse(rawRecord.mobileGridSchema, null),
-            enableMobileTheme: rawRecord.enableMobileTheme ?? false,
+            enableMobileTheme: Boolean(rawRecord.enableMobileTheme),
             mobileThemeConfig: safeParse(rawRecord.mobileThemeConfig, {}),
             mobileContainerStyle: rawRecord.mobileContainerStyle || 'transparent',
           };
@@ -382,9 +433,9 @@ export class PluginCustomLoginPageServer extends Plugin {
             themeConfig: safeParse(rawRecord.themeConfig, DEFAULT_CONFIG_VALUES.themeConfig),
             customBlocks: safeParse(rawRecord.customBlocks, []),
             gridSchema: safeParse(rawRecord.gridSchema, DEFAULT_PRESET_GRID_SCHEMA),
-            enableMobileCustom: rawRecord.enableMobileCustom ?? false,
+            enableMobileCustom: Boolean(rawRecord.enableMobileCustom),
             mobileGridSchema: safeParse(rawRecord.mobileGridSchema, null),
-            enableMobileTheme: rawRecord.enableMobileTheme ?? false,
+            enableMobileTheme: Boolean(rawRecord.enableMobileTheme),
             mobileThemeConfig: safeParse(rawRecord.mobileThemeConfig, {}),
             mobileContainerStyle: rawRecord.mobileContainerStyle || 'transparent',
           };
@@ -422,9 +473,9 @@ export class PluginCustomLoginPageServer extends Plugin {
             themeConfig: safeParse(rawRecord.themeConfig, DEFAULT_CONFIG_VALUES.themeConfig),
             customBlocks: safeParse(rawRecord.customBlocks, []),
             gridSchema: safeParse(rawRecord.gridSchema, DEFAULT_PRESET_GRID_SCHEMA),
-            enableMobileCustom: rawRecord.enableMobileCustom ?? false,
+            enableMobileCustom: Boolean(rawRecord.enableMobileCustom),
             mobileGridSchema: safeParse(rawRecord.mobileGridSchema, null),
-            enableMobileTheme: rawRecord.enableMobileTheme ?? false,
+            enableMobileTheme: Boolean(rawRecord.enableMobileTheme),
             mobileThemeConfig: safeParse(rawRecord.mobileThemeConfig, {}),
             mobileContainerStyle: rawRecord.mobileContainerStyle || 'transparent',
           };

@@ -105,6 +105,12 @@ const CustomAuthLayout: React.FC = () => {
 
   const checkIsMobile = () => {
     if (typeof window === 'undefined') return false;
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const forced = searchParams.get('viewport') || searchParams.get('mode');
+      if (forced === 'mobile') return true;
+      if (forced === 'desktop') return false;
+    } catch (e) {}
     const isNarrow = window.innerWidth <= 768;
     const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     return isNarrow || isMobileUA;
