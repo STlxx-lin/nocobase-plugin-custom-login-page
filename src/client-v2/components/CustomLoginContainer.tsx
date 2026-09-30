@@ -283,30 +283,37 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
           borderRadius: 24,
+          overflow: 'hidden',
           border: '1px solid rgba(255, 255, 255, 0.16)',
           boxShadow: '0 20px 50px rgba(0, 0, 0, 0.35)',
-          padding: canvasWidth === 'full' ? '24px' : '40px',
+          padding: canvasWidth === 'full' ? '24px' : '36px 32px',
         };
       }
 
       if (containerStyle === 'card') {
         return {
           ...base,
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          backgroundColor: 'rgba(255, 255, 255, 0.96)',
           borderRadius: 24,
+          overflow: 'hidden',
           boxShadow: '0 25px 60px rgba(0, 0, 0, 0.25)',
           border: '1px solid rgba(255, 255, 255, 0.8)',
-          padding: canvasWidth === 'full' ? '24px' : '40px',
+          padding: canvasWidth === 'full' ? '24px' : '36px 32px',
         };
       }
 
       if (containerStyle === 'dark-card') {
         return {
           ...base,
-          backgroundColor: 'rgba(15, 23, 42, 0.85)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255, 255, 255, 0.14)',
+          backgroundColor: 'rgba(15, 23, 42, 0.88)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          borderRadius: 24,
+          overflow: 'hidden',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow:
+            '0 25px 60px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+          padding: canvasWidth === 'full' ? '24px' : '36px 32px',
         };
       }
 
@@ -625,27 +632,105 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
             color: #1e293b !important;
           }
 
-          /* === 黑曜科技大卡片 (custom-login-style-dark-card) 内部深邃太空质感 === */
+          /* === 黑曜科技大卡片 (custom-login-style-dark-card) 内部深邃太空与未来科技质感 === */
           .custom-login-style-dark-card .custom-login-main-viewport {
             color: #ffffff;
           }
           .custom-login-style-dark-card .nb-markdown-vditor {
             color: #ffffff !important;
           }
-          .custom-login-style-dark-card .custom-login-main-viewport .custom-signin-card,
-          .custom-login-style-dark-card .custom-login-main-viewport [data-custom-block-root] div[style*="max-width: 400px"],
-          .custom-login-style-dark-card .custom-login-main-viewport [data-custom-block-root] div[style*="maxWidth: 400"] {
+          /* 1. 品牌标语：高贵白金高光标题与高可读副标题 */
+          .custom-login-style-dark-card .custom-block-hero h1,
+          .custom-login-style-dark-card .custom-block-hero .ant-typography h1,
+          .custom-login-style-dark-card [data-custom-block-root].custom-block-hero h1 {
+            color: #f8fafc !important;
+            text-shadow: 0 2px 14px rgba(0, 0, 0, 0.75) !important;
+          }
+          .custom-login-style-dark-card .custom-block-hero p,
+          .custom-login-style-dark-card .custom-block-hero .ant-typography,
+          .custom-login-style-dark-card [data-custom-block-root].custom-block-hero p {
+            color: #94a3b8 !important;
+            text-shadow: none !important;
+          }
+          .custom-login-style-dark-card .custom-block-hero .ant-tag {
+            background: rgba(59, 130, 246, 0.2) !important;
+            color: #60a5fa !important;
+            border-color: rgba(96, 165, 250, 0.35) !important;
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.15) !important;
+          }
+
+          /* 2. 原生登录表单：磨砂深空微嵌卡片 + 顶部高光边框 */
+          .custom-login-style-dark-card .custom-signin-card,
+          .custom-login-style-dark-card [data-custom-block-root] .custom-signin-card,
+          .custom-login-style-dark-card .custom-login-main-viewport div[style*="max-width: 400px"],
+          .custom-login-style-dark-card .custom-login-main-viewport div[style*="maxWidth: 400"] {
             background: rgba(30, 41, 59, 0.75) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
             border: 1px solid rgba(255, 255, 255, 0.12) !important;
-            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35) !important;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
           }
           .custom-login-style-dark-card .custom-login-main-viewport [data-custom-block-root] h3 {
             color: #ffffff !important;
           }
-          .custom-login-style-dark-card .custom-login-main-viewport [data-custom-block-root] div[style*="background: rgba(255, 255, 255, 0.12)"],
-          .custom-login-style-dark-card .custom-login-main-viewport [data-custom-block-root] div[style*="background:rgba(255, 255, 255, 0.12)"] {
+          .custom-login-style-dark-card .custom-signin-card .ant-form-item-label > label {
+            color: #cbd5e1 !important;
+          }
+
+          /* 3. 特性矩阵：太空微透明深蓝卡片 */
+          .custom-login-style-dark-card .custom-features-item,
+          .custom-login-style-dark-card [data-custom-block-root] div[style*="background: rgba(255, 255, 255, 0.12)"],
+          .custom-login-style-dark-card [data-custom-block-root] div[style*="background:rgba(255, 255, 255, 0.12)"] {
             background: rgba(30, 41, 59, 0.6) !important;
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+          }
+          .custom-login-style-dark-card .custom-features-item h5 {
+            color: #f1f5f9 !important;
+          }
+          .custom-login-style-dark-card .custom-features-item p {
+            color: #94a3b8 !important;
+          }
+
+          /* 4. 公告通知条：深色霓虹科技感 */
+          .custom-login-style-dark-card .custom-block-notice.custom-notice-card,
+          .custom-login-style-dark-card .custom-notice-card {
+            background: rgba(30, 41, 59, 0.85) !important;
+            border: 1px solid rgba(59, 130, 246, 0.35) !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+            color: #e2e8f0 !important;
+          }
+
+          /* 5. 核心看板与倒计时 */
+          .custom-login-style-dark-card .custom-stats-card-inner {
+            background: rgba(30, 41, 59, 0.55) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          }
+          .custom-login-style-dark-card .custom-stats-value {
+            color: #38bdf8 !important;
+          }
+          .custom-login-style-dark-card .custom-stats-label {
+            color: #94a3b8 !important;
+          }
+          .custom-login-style-dark-card .custom-countdown-card {
+            background: rgba(30, 41, 59, 0.55) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          }
+          .custom-login-style-dark-card .custom-countdown-number-box {
+            background: rgba(15, 23, 42, 0.85) !important;
+            border: 1px solid rgba(59, 130, 246, 0.3) !important;
+            color: #38bdf8 !important;
+          }
+
+          /* 6. 客服与支持 */
+          .custom-login-style-dark-card .custom-contact-card {
+            background: rgba(30, 41, 59, 0.55) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          }
+          .custom-login-style-dark-card .custom-contact-item {
+            background: rgba(15, 23, 42, 0.6) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            color: #cbd5e1 !important;
           }
 
           /* === 全局三维一体流式响应式排版引擎（Container Query + Viewport Class + Media Query） === */
@@ -687,7 +772,7 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
             width: '100%',
           }}
         >
-          <div style={getMainContainerStyle()}>
+          <div style={getMainContainerStyle()} className="custom-login-card-container">
             <LoginPageBlockGridCanvas
               ref={ref}
               gridSchema={effectiveGridSchema}

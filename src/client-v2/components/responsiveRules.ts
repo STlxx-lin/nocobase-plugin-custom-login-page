@@ -4,8 +4,25 @@
  */
 export const buildMobileResponsiveRules = (scope = ''): string => `
   ${scope} .custom-login-main-viewport {
-    padding: 16px 12px !important;
+    padding: 8px 6px !important;
     align-items: flex-start !important;
+  }
+  ${scope} .custom-login-card-container {
+    border-radius: 20px !important;
+    overflow: hidden !important;
+    padding: 16px 12px !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+  }
+  ${scope}.custom-login-style-transparent .custom-login-card-container,
+  ${scope} .custom-login-style-transparent .custom-login-card-container {
+    padding: 6px 4px !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
   }
   ${scope} [data-grid-root] > .ant-row,
   ${scope} [data-grid-root] .ant-row,

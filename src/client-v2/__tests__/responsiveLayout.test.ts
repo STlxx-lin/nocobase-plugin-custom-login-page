@@ -136,4 +136,20 @@ describe('Responsive Layout Engine (Container Queries & Viewport Mode)', () => {
     expect(container.querySelector('.custom-block-language .custom-language-inner')).not.toBeNull();
     expect(container.querySelector('.custom-block-html .custom-html-content')).not.toBeNull();
   });
+
+  it('verifies concentric corner curvature and overflow protection for mobile card container', () => {
+    const cssRules = buildMobileResponsiveRules('.custom-login-page-root.is-viewport-mobile');
+
+    // 验证主体视口与卡片容器的同心圆角与外边距收敛规则
+    expect(cssRules).toContain('.custom-login-main-viewport');
+    expect(cssRules).toContain('padding: 8px 6px !important');
+    expect(cssRules).toContain('.custom-login-card-container');
+    expect(cssRules).toContain('border-radius: 20px !important');
+    expect(cssRules).toContain('overflow: hidden !important');
+    expect(cssRules).toContain('padding: 16px 12px !important');
+
+    // 验证在透明风格下卡片容器自适应紧凑无圆角多余留白
+    expect(cssRules).toContain('.custom-login-style-transparent .custom-login-card-container');
+    expect(cssRules).toContain('border-radius: 0 !important');
+  });
 });
