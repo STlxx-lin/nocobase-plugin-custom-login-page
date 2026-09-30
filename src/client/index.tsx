@@ -3,10 +3,21 @@ import { Plugin, useAPIClient } from '@nocobase/client';
 import { useSystemSettings, SwitchLanguage, PoweredBy } from '@nocobase/client-v2';
 import { AuthenticatorsContextProvider } from '@nocobase/plugin-auth/client';
 import { Outlet } from 'react-router-dom';
-import { theme } from 'antd';
+import { theme, Spin } from 'antd';
 import { CustomLoginContainer } from '../client-v2/components/CustomLoginContainer';
-import { CustomLoginPageSettings } from '../client-v2/pages/CustomLoginPageSettings';
 import { CustomLoginConfig } from '../client-v2/types';
+
+const LazyCustomLoginPageSettings: React.FC = (props) => {
+  const Component = React.useMemo(
+    () => React.lazy(() => import('../client-v2/pages/CustomLoginPageSettings').then((m) => ({ default: m.CustomLoginPageSettings }))),
+    []
+  );
+  return (
+    <React.Suspense fallback={<div style={{ padding: '60px 0', textAlign: 'center' }}><Spin size="large" /></div>}>
+      <Component {...props} />
+    </React.Suspense>
+  );
+};
 
 const getInitialCachedConfig = (): { config: CustomLoginConfig | null; hasCached: boolean } => {
   if (typeof window === 'undefined') return { config: null, hasCached: false };
@@ -159,7 +170,7 @@ export class PluginCustomLoginPageClient extends Plugin {
           title,
           icon,
           aclSnippet: 'pm',
-          Component: CustomLoginPageSettings,
+          Component: LazyCustomLoginPageSettings,
         });
 
         const pluginNames = [
@@ -177,7 +188,7 @@ export class PluginCustomLoginPageClient extends Plugin {
           title,
           icon,
           aclSnippet: 'pm',
-          Component: CustomLoginPageSettings,
+          Component: LazyCustomLoginPageSettings,
         });
       }
     }

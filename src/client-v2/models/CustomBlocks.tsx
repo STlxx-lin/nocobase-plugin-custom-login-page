@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BlockModel, Icon } from '@nocobase/client-v2';
-import { openBlockContentEditor } from '../components/BlockContentEditorDrawer';
+import { openBlockContentEditor } from '../components/openBlockEditor';
 import { tExpr, useT } from '../locale';
 import { sanitizeHtml } from '../utils/sanitizeHtml';
 export { sanitizeHtml } from '../utils/sanitizeHtml';

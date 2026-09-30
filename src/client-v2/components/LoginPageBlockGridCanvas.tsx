@@ -4,7 +4,6 @@ import { EditOutlined } from '@ant-design/icons';
 import { BlockGridModel } from '@nocobase/client-v2';
 import { useFlowEngine, FlowModelRenderer } from '@nocobase/flow-engine';
 import { useT } from '../locale';
-import { openBlockContentEditor } from './BlockContentEditorDrawer';
 import {
   CustomLoginBlockModel,
   SignInFormBlockModel,
