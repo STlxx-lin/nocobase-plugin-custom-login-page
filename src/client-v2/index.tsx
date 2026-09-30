@@ -82,6 +82,11 @@ const EnhancedSignInPage: React.FC<{ originalSignInPage: React.ComponentType }> 
             customBlocks: safeParseJson(data.customBlocks, []),
             gridSchema: safeParseJson(data.gridSchema, null),
             themeConfig: safeParseJson(data.themeConfig, {}),
+            enableMobileCustom: Boolean(data.enableMobileCustom),
+            mobileGridSchema: safeParseJson(data.mobileGridSchema, null),
+            enableMobileTheme: Boolean(data.enableMobileTheme),
+            mobileThemeConfig: safeParseJson(data.mobileThemeConfig, {}),
+            mobileContainerStyle: data.mobileContainerStyle || 'transparent',
           };
 
           // SWR 写入最新配置缓存
@@ -103,6 +108,24 @@ const EnhancedSignInPage: React.FC<{ originalSignInPage: React.ComponentType }> 
       mounted = false;
     };
   }, [app]);
+
+  // 智能双重判定（视口宽度 <= 768px 或 移动端设备 UA），支持窗口变动自适应响应
+  const checkIsMobile = () => {
+    if (typeof window === 'undefined') return false;
+    const isNarrow = window.innerWidth <= 768;
+    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    return isNarrow || isMobileUA;
+  };
+
+  const [isMobile, setIsMobile] = useState<boolean>(() => checkIsMobile());
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(checkIsMobile());
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // 加载中占位（仅首次无任何本地缓存时显示柔和居中指示，避免硬编码深蓝全屏导致的闪烁）
   if (loading) {
@@ -135,10 +158,14 @@ const EnhancedSignInPage: React.FC<{ originalSignInPage: React.ComponentType }> 
     return <OriginalSignInPage />;
   }
 
+  const isMobileTarget = isMobile && Boolean(config.enableMobileCustom);
+
   return (
     <CustomLoginContainer
       config={config}
       designMode={false}
+      viewportMode={isMobile ? 'mobile' : 'desktop'}
+      activeTarget={isMobileTarget ? 'mobile' : 'desktop'}
       originalSignInPage={OriginalSignInPage}
     />
   );

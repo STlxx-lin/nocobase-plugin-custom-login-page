@@ -64,4 +64,9 @@ export interface CustomLoginConfig {
   themeConfig: ThemeConfig;
   customBlocks: CustomBlock[];
   gridSchema?: any;
+  enableMobileCustom?: boolean;
+  mobileGridSchema?: any;
+  enableMobileTheme?: boolean;
+  mobileThemeConfig?: Partial<ThemeConfig>;
+  mobileContainerStyle?: ContainerStyle;
 }

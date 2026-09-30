@@ -41,7 +41,7 @@ import { reaction } from '@formily/reactive';
 import { useT } from '../locale';
 import { CUSTOM_LOGIN_PUBLIC_CONFIG_CACHE_KEY } from '../constants';
 import { CustomLoginContainer } from '../components/CustomLoginContainer';
-import { LoginPageBlockGridCanvasRef, DEFAULT_PRESET_GRID_SCHEMA } from '../components/LoginPageBlockGridCanvas';
+import { LoginPageBlockGridCanvasRef, DEFAULT_PRESET_GRID_SCHEMA, DEFAULT_PRESET_MOBILE_GRID_SCHEMA } from '../components/LoginPageBlockGridCanvas';
 import { BlockContentEditorDrawer } from '../components/BlockContentEditorDrawer';
 import { CustomLoginConfig, CanvasWidthMode, ContainerStyle } from '../types';
 
@@ -110,6 +110,11 @@ const DEFAULT_CONFIG: CustomLoginConfig = {
   containerStyle: 'transparent',
   customBlocks: [],
   gridSchema: DEFAULT_PRESET_GRID_SCHEMA,
+  enableMobileCustom: false,
+  mobileGridSchema: null,
+  enableMobileTheme: false,
+  mobileThemeConfig: {},
+  mobileContainerStyle: 'transparent',
   themeConfig: {
     brandTitle: 'NocoBase 数字化协同平台',
     brandSubtitle: '企业级无代码应用构建与协同中心',
@@ -214,7 +219,9 @@ export const CustomLoginPageSettings: React.FC = () => {
       if (!data || typeof data.enabled !== 'boolean') throw new Error('Invalid configuration response');
       if (data) {
         const parsedGridSchema = safeParseJson(data.gridSchema, DEFAULT_PRESET_GRID_SCHEMA);
+        const parsedMobileGridSchema = safeParseJson(data.mobileGridSchema, null);
         const parsedThemeConfig = safeParseJson(data.themeConfig, DEFAULT_CONFIG.themeConfig);
+        const parsedMobileThemeConfig = safeParseJson(data.mobileThemeConfig, {});
         const parsedCustomBlocks = safeParseJson(data.customBlocks, []);
 
         const merged: CustomLoginConfig = {
@@ -224,6 +231,11 @@ export const CustomLoginPageSettings: React.FC = () => {
           containerStyle: data.containerStyle || 'transparent',
           customBlocks: parsedCustomBlocks,
           gridSchema: parsedGridSchema,
+          enableMobileCustom: Boolean(data.enableMobileCustom),
+          mobileGridSchema: parsedMobileGridSchema,
+          enableMobileTheme: Boolean(data.enableMobileTheme),
+          mobileThemeConfig: parsedMobileThemeConfig,
+          mobileContainerStyle: data.mobileContainerStyle || 'transparent',
           themeConfig: {
             ...DEFAULT_CONFIG.themeConfig,
             ...parsedThemeConfig,
@@ -292,7 +304,61 @@ export const CustomLoginPageSettings: React.FC = () => {
     }
   };
 
-  // 保存全局配置
+  const isMobileActive = viewportMode === 'mobile' && Boolean(config.enableMobileCustom);
+
+  // 视口或端切换前，及时捕获并暂存当前画布结构，确保任何改动不丢失
+  const saveCurrentCanvasToState = React.useCallback(() => {
+    try {
+      const serialized = canvasRef.current?.serialize?.();
+      if (!serialized) return;
+      if (isMobileActive) {
+        setConfig((prev) => ({ ...prev, mobileGridSchema: serialized }));
+      } else {
+        setConfig((prev) => ({ ...prev, gridSchema: serialized }));
+      }
+    } catch (e) {}
+  }, [isMobileActive]);
+
+  // 切换视口
+  const handleViewportChange = (mode: 'desktop' | 'tablet' | 'mobile') => {
+    if (mode === viewportMode) return;
+    saveCurrentCanvasToState();
+    setViewportMode(mode);
+    setConfigKey((k) => k + 1);
+  };
+
+  // 开启/关闭移动端独立定制模式
+  const handleToggleMobileCustom = (checked: boolean) => {
+    saveCurrentCanvasToState();
+    markDirty();
+    setConfig((prev) => {
+      const nextSchema = prev.mobileGridSchema || DEFAULT_PRESET_MOBILE_GRID_SCHEMA;
+      return {
+        ...prev,
+        enableMobileCustom: checked,
+        mobileGridSchema: checked ? nextSchema : prev.mobileGridSchema,
+      };
+    });
+    setConfigKey((k) => k + 1);
+    if (checked) {
+      message.success(t('Mobile independent canvas enabled: You can now freely arrange blocks for mobile devices!'));
+    } else {
+      message.info(t('Switched to mobile adaptive layout: Mobile devices will inherit desktop layout.'));
+    }
+  };
+
+  // 重置移动端为纯净极简单登录卡片
+  const handleResetMobilePreset = () => {
+    markDirty();
+    setConfig((prev) => ({
+      ...prev,
+      mobileGridSchema: DEFAULT_PRESET_MOBILE_GRID_SCHEMA,
+    }));
+    setConfigKey((k) => k + 1);
+    message.success(t('Mobile layout reset to minimal blank sign-in card preset'));
+  };
+
+  // 保存全局配置（同时序列化双端 Schema 并合并持久化）
   const handleSaveGlobalConfig = async () => {
     if (writePending.current) return;
     if (!configLoaded) {
@@ -303,16 +369,30 @@ export const CustomLoginPageSettings: React.FC = () => {
     setSaving(true);
     try {
       const formValues = drawerVisible ? await form.validateFields() : {};
-      const serializedGrid = canvasRef.current?.serialize?.();
-      if (!serializedGrid) throw new Error(t('Canvas is not ready. Please retry.'));
+      const serializedCurrent = canvasRef.current?.serialize?.();
+      if (!serializedCurrent) throw new Error(t('Canvas is not ready. Please retry.'));
+
+      let finalGridSchema = config.gridSchema;
+      let finalMobileGridSchema = config.mobileGridSchema;
+
+      if (isMobileActive) {
+        finalMobileGridSchema = serializedCurrent;
+      } else {
+        finalGridSchema = serializedCurrent;
+      }
 
       const payload: CustomLoginConfig = {
         ...config,
         ...formValues,
-        gridSchema: serializedGrid || config.gridSchema || DEFAULT_PRESET_GRID_SCHEMA,
+        gridSchema: finalGridSchema || DEFAULT_PRESET_GRID_SCHEMA,
+        mobileGridSchema: finalMobileGridSchema || (config.enableMobileCustom ? DEFAULT_PRESET_MOBILE_GRID_SCHEMA : null),
         themeConfig: {
           ...config.themeConfig,
           ...(formValues.themeConfig || {}),
+        },
+        mobileThemeConfig: {
+          ...(config.mobileThemeConfig || {}),
+          ...(formValues.mobileThemeConfig || {}),
         },
       };
 
@@ -330,6 +410,9 @@ export const CustomLoginPageSettings: React.FC = () => {
         localStorage.setItem(CUSTOM_LOGIN_PUBLIC_CONFIG_CACHE_KEY, JSON.stringify(payload));
       } catch (e) {}
 
+      // 更新本地 state
+      setConfig(payload);
+
       // Edits made while the request was in flight must remain visible and unsaved.
       setSaveStatus(editRevision.current === revision ? 'saved' : 'dirty');
       message.success(t('Configuration saved successfully'));
@@ -346,14 +429,24 @@ export const CustomLoginPageSettings: React.FC = () => {
   // 导出配置文件
   const handleExportConfig = () => {
     try {
-      const serializedGrid = canvasRef.current?.serialize?.() || config.gridSchema || DEFAULT_PRESET_GRID_SCHEMA;
+      const serializedCurrent = canvasRef.current?.serialize?.();
+      let finalGridSchema = config.gridSchema;
+      let finalMobileGridSchema = config.mobileGridSchema;
+
+      if (isMobileActive) {
+        if (serializedCurrent) finalMobileGridSchema = serializedCurrent;
+      } else {
+        if (serializedCurrent) finalGridSchema = serializedCurrent;
+      }
+
       const exportData = {
         name: 'NocoBase Custom Login Page Config',
-        version: '1.0',
+        version: '2.0',
         exportedAt: new Date().toISOString(),
         config: {
           ...config,
-          gridSchema: serializedGrid,
+          gridSchema: finalGridSchema || DEFAULT_PRESET_GRID_SCHEMA,
+          mobileGridSchema: finalMobileGridSchema,
         },
       };
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -384,9 +477,14 @@ export const CustomLoginPageSettings: React.FC = () => {
           ...config,
           ...importedConfig,
           gridSchema: importedConfig.gridSchema || config.gridSchema || DEFAULT_PRESET_GRID_SCHEMA,
+          mobileGridSchema: importedConfig.mobileGridSchema ?? config.mobileGridSchema,
           themeConfig: {
             ...config.themeConfig,
             ...(importedConfig.themeConfig || {}),
+          },
+          mobileThemeConfig: {
+            ...(config.mobileThemeConfig || {}),
+            ...(importedConfig.mobileThemeConfig || {}),
           },
         };
         setConfig(newConfig);
@@ -652,7 +750,7 @@ export const CustomLoginPageSettings: React.FC = () => {
               </span>
               <Segmented
                 value={viewportMode}
-                onChange={(val) => setViewportMode(val as any)}
+                onChange={(val) => handleViewportChange(val as any)}
                 options={[
                   {
                     label: (
@@ -683,6 +781,45 @@ export const CustomLoginPageSettings: React.FC = () => {
                   },
                 ]}
               />
+
+              {viewportMode === 'mobile' && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '2px 10px',
+                    background: config.enableMobileCustom ? '#eff6ff' : '#f8fafc',
+                    borderRadius: 8,
+                    border: `1px solid ${config.enableMobileCustom ? '#bfdbfe' : '#e2e8f0'}`,
+                  }}
+                >
+                  <span style={{ fontSize: 12, fontWeight: 600, color: config.enableMobileCustom ? '#1d4ed8' : '#64748b' }}>
+                    {t('Mobile layout:')}
+                  </span>
+                  <Switch
+                    size="small"
+                    checked={Boolean(config.enableMobileCustom)}
+                    onChange={handleToggleMobileCustom}
+                    checkedChildren={t('Custom canvas')}
+                    unCheckedChildren={t('Adaptive')}
+                    style={{ background: config.enableMobileCustom ? '#1677ff' : '#cbd5e1' }}
+                  />
+                  {config.enableMobileCustom && (
+                    <Popconfirm
+                      title={t('Reset mobile layout to minimal blank?')}
+                      description={t('Will retain only the core sign-in card and remove all other blocks on mobile.')}
+                      onConfirm={handleResetMobilePreset}
+                      okText={t('Confirm')}
+                      cancelText={t('Cancel')}
+                    >
+                      <Button type="link" size="small" style={{ padding: 0, fontSize: 12, height: 'auto' }}>
+                        {t('Reset minimal blank')}
+                      </Button>
+                    </Popconfirm>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -707,6 +844,26 @@ export const CustomLoginPageSettings: React.FC = () => {
               >
                 <AlertOutlined />
                 <span>{t('Currently disabled: Front-end visitors will see the native system login form. Toggle switch to enable.')}</span>
+              </Tag>
+            ) : isMobileActive ? (
+              <Tag
+                color="blue"
+                style={{
+                  fontSize: 12,
+                  padding: '3px 10px',
+                  borderRadius: 6,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  margin: 0,
+                  lineHeight: '20px',
+                  border: '1px solid #93c5fd',
+                  background: '#eff6ff',
+                  color: '#1e40af',
+                }}
+              >
+                <MobileOutlined />
+                <span>{t('📱 Mobile independent mode active: Editing mobile-exclusive canvas without affecting desktop')}</span>
               </Tag>
             ) : designMode ? (
               <Tag
@@ -823,11 +980,12 @@ export const CustomLoginPageSettings: React.FC = () => {
           </div>
         ) : (
           <CustomLoginContainer
-            key={`login-canvas-${configKey}`}
+            key={`login-canvas-${configKey}-${isMobileActive ? 'mobile' : 'desktop'}`}
             ref={canvasRef}
             config={config}
             designMode={designMode}
             viewportMode={viewportMode}
+            activeTarget={isMobileActive ? 'mobile' : 'desktop'}
             onModelReady={handleCanvasReady}
           />
         )}
@@ -904,6 +1062,10 @@ export const CustomLoginPageSettings: React.FC = () => {
                 ...prev.themeConfig,
                 ...(allValues.themeConfig || {}),
               },
+              mobileThemeConfig: {
+                ...(prev.mobileThemeConfig || {}),
+                ...(allValues.mobileThemeConfig || {}),
+              },
             }));
           }}
         >
@@ -948,6 +1110,61 @@ export const CustomLoginPageSettings: React.FC = () => {
               placeholder={t('e.g. linear-gradient(135deg, #0a192f 0%, #172a45 50%, #203a43 100%) or https://.../bg.jpg')}
             />
           </Form.Item>
+
+          {/* 📱 移动端专属外观与背景独立设置折叠卡片 */}
+          <div style={{ padding: '12px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0', marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: config.enableMobileTheme ? 12 : 0 }}>
+              <div>
+                <span style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>
+                  {t('📱 Mobile independent background & style')}
+                </span>
+                <div style={{ fontSize: 11, color: '#64748b' }}>
+                  {t('Configure separate vertical wallpaper, color or style for mobile devices')}
+                </div>
+              </div>
+              <Switch
+                checked={Boolean(config.enableMobileTheme)}
+                onChange={(checked) => {
+                  markDirty();
+                  setConfig((prev) => ({ ...prev, enableMobileTheme: checked }));
+                  form.setFieldsValue({ enableMobileTheme: checked });
+                }}
+                checkedChildren={t('Custom')}
+                unCheckedChildren={t('Follow PC')}
+              />
+            </div>
+
+            {config.enableMobileTheme && (
+              <div style={{ paddingTop: 8, borderTop: '1px dashed #cbd5e1' }}>
+                <Form.Item name="mobileContainerStyle" label={t('Mobile container visual style')}>
+                  <Select
+                    options={[
+                      { label: t('Transparent (Recommended)'), value: 'transparent' },
+                      { label: t('Modern frosted glass'), value: 'glass' },
+                      { label: t('Classic white card'), value: 'card' },
+                      { label: t('Obsidian dark card'), value: 'dark-card' },
+                    ]}
+                  />
+                </Form.Item>
+                <Form.Item name={['mobileThemeConfig', 'backgroundType']} label={t('Mobile background type')}>
+                  <Radio.Group buttonStyle="solid">
+                    <Radio.Button value="gradient">{t('Gradient')}</Radio.Button>
+                    <Radio.Button value="color">{t('Solid color')}</Radio.Button>
+                    <Radio.Button value="image">{t('Portrait Wallpaper')}</Radio.Button>
+                  </Radio.Group>
+                </Form.Item>
+                <Form.Item
+                  name={['mobileThemeConfig', 'backgroundValue']}
+                  label={t('Mobile background value (CSS gradient, HEX color or Vertical Image URL)')}
+                >
+                  <Input.TextArea
+                    rows={2}
+                    placeholder={t('e.g. #0a192f or https://.../mobile-vertical-bg.jpg')}
+                  />
+                </Form.Item>
+              </div>
+            )}
+          </div>
 
           <Alert
             type="info"

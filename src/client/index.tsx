@@ -103,6 +103,23 @@ const CustomAuthLayout: React.FC = () => {
     </AuthenticatorsContextProvider>
   );
 
+  const checkIsMobile = () => {
+    if (typeof window === 'undefined') return false;
+    const isNarrow = window.innerWidth <= 768;
+    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    return isNarrow || isMobileUA;
+  };
+
+  const [isMobile, setIsMobile] = useState<boolean>(() => checkIsMobile());
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(checkIsMobile());
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // 如果加载中、未配置或未开启自定义登录，降级展示原生登录页（忠实保留官方原生的系统标题、语言切换与底部版权）
   if (loading || !config || !config.enabled) {
     return (
@@ -131,10 +148,14 @@ const CustomAuthLayout: React.FC = () => {
     );
   }
 
+  const isMobileTarget = isMobile && Boolean(config?.enableMobileCustom);
+
   return (
     <CustomLoginContainer
       config={config}
       designMode={false}
+      viewportMode={isMobile ? 'mobile' : 'desktop'}
+      activeTarget={isMobileTarget ? 'mobile' : 'desktop'}
       originalSignInPage={NativeSignIn}
       apiClient={apiClient}
     />

@@ -60,5 +60,30 @@ export default defineCollection({
       type: 'integer',
       defaultValue: 15,
     },
+    {
+      name: 'enableMobileCustom',
+      type: 'boolean',
+      defaultValue: false,
+    },
+    {
+      name: 'mobileGridSchema',
+      type: 'json',
+      defaultValue: null,
+    },
+    {
+      name: 'enableMobileTheme',
+      type: 'boolean',
+      defaultValue: false,
+    },
+    {
+      name: 'mobileThemeConfig',
+      type: 'json',
+      defaultValue: {},
+    },
+    {
+      name: 'mobileContainerStyle',
+      type: 'string',
+      defaultValue: 'transparent',
+    },
   ],
 });

@@ -89,6 +89,47 @@ const DEFAULT_PRESET_GRID_SCHEMA = {
     ],
   },
 };
+
+const DEFAULT_PRESET_MOBILE_GRID_SCHEMA = {
+  use: 'LoginPageBlockGridModel',
+  uid: 'custom_login_page_mobile_grid',
+  props: {
+    colGap: 16,
+    rowGap: 20,
+    layout: {
+      version: 2,
+      rows: [
+        {
+          id: 'row_mobile_login_main',
+          cells: [
+            {
+              id: 'row_mobile_login_main:cell:0',
+              items: ['signin_form_block_mobile_001'],
+            },
+          ],
+          sizes: [24],
+        },
+      ],
+    },
+  },
+  subModels: {
+    items: [
+      {
+        uid: 'signin_form_block_mobile_001',
+        use: 'SignInFormBlockModel',
+        parentId: 'custom_login_page_mobile_grid',
+        subKey: 'items',
+        subType: 'array',
+        props: {
+          title: '欢迎登录',
+          subtitle: '请输入账号密码登录系统',
+          cardBg: 'rgba(255, 255, 255, 0.95)',
+        },
+      },
+    ],
+  },
+};
+
 const DEFAULT_CONFIG_VALUES = {
   gridSchema: DEFAULT_PRESET_GRID_SCHEMA,
   key: 'default',
@@ -101,6 +142,11 @@ const DEFAULT_CONFIG_VALUES = {
   customBlocks: [],
   allowedWorkflowKeys: [],
   rateLimitPerMinute: 15,
+  enableMobileCustom: false,
+  mobileGridSchema: null,
+  enableMobileTheme: false,
+  mobileThemeConfig: {},
+  mobileContainerStyle: 'transparent',
   themeConfig: {
     brandTitle: 'NocoBase',
     brandSubtitle: '企业级无代码应用构建与协作平台',
@@ -116,7 +162,7 @@ const DEFAULT_CONFIG_VALUES = {
 
 const PUBLIC_CONFIG_CACHE_KEY = 'custom_login:public_config';
 
-export { DEFAULT_PRESET_GRID_SCHEMA, DEFAULT_CONFIG_VALUES, PUBLIC_CONFIG_CACHE_KEY };
+export { DEFAULT_PRESET_GRID_SCHEMA, DEFAULT_PRESET_MOBILE_GRID_SCHEMA, DEFAULT_CONFIG_VALUES, PUBLIC_CONFIG_CACHE_KEY };
 
 const ALLOWED_CONFIG_KEYS = [
   'enabled',
@@ -130,6 +176,11 @@ const ALLOWED_CONFIG_KEYS = [
   'gridSchema',
   'allowedWorkflowKeys',
   'rateLimitPerMinute',
+  'enableMobileCustom',
+  'mobileGridSchema',
+  'enableMobileTheme',
+  'mobileThemeConfig',
+  'mobileContainerStyle',
 ];
 
 const sanitizeConfigValues = (input: any) => {
@@ -152,6 +203,11 @@ const sanitizeConfigValues = (input: any) => {
   if ('containerStyle' in sanitized) {
     if (!['transparent', 'glass', 'card', 'dark-card'].includes(sanitized.containerStyle)) {
       sanitized.containerStyle = 'transparent';
+    }
+  }
+  if ('mobileContainerStyle' in sanitized) {
+    if (!['transparent', 'glass', 'card', 'dark-card'].includes(sanitized.mobileContainerStyle)) {
+      sanitized.mobileContainerStyle = 'transparent';
     }
   }
   return sanitized;
@@ -295,6 +351,11 @@ export class PluginCustomLoginPageServer extends Plugin {
             themeConfig: safeParse(rawRecord.themeConfig, DEFAULT_CONFIG_VALUES.themeConfig),
             customBlocks: safeParse(rawRecord.customBlocks, []),
             gridSchema: safeParse(rawRecord.gridSchema, DEFAULT_PRESET_GRID_SCHEMA),
+            enableMobileCustom: rawRecord.enableMobileCustom ?? false,
+            mobileGridSchema: safeParse(rawRecord.mobileGridSchema, null),
+            enableMobileTheme: rawRecord.enableMobileTheme ?? false,
+            mobileThemeConfig: safeParse(rawRecord.mobileThemeConfig, {}),
+            mobileContainerStyle: rawRecord.mobileContainerStyle || 'transparent',
           };
 
           await this.setPublicConfigCache(publicConfig);
@@ -321,6 +382,11 @@ export class PluginCustomLoginPageServer extends Plugin {
             themeConfig: safeParse(rawRecord.themeConfig, DEFAULT_CONFIG_VALUES.themeConfig),
             customBlocks: safeParse(rawRecord.customBlocks, []),
             gridSchema: safeParse(rawRecord.gridSchema, DEFAULT_PRESET_GRID_SCHEMA),
+            enableMobileCustom: rawRecord.enableMobileCustom ?? false,
+            mobileGridSchema: safeParse(rawRecord.mobileGridSchema, null),
+            enableMobileTheme: rawRecord.enableMobileTheme ?? false,
+            mobileThemeConfig: safeParse(rawRecord.mobileThemeConfig, {}),
+            mobileContainerStyle: rawRecord.mobileContainerStyle || 'transparent',
           };
           await next();
         },
@@ -356,6 +422,11 @@ export class PluginCustomLoginPageServer extends Plugin {
             themeConfig: safeParse(rawRecord.themeConfig, DEFAULT_CONFIG_VALUES.themeConfig),
             customBlocks: safeParse(rawRecord.customBlocks, []),
             gridSchema: safeParse(rawRecord.gridSchema, DEFAULT_PRESET_GRID_SCHEMA),
+            enableMobileCustom: rawRecord.enableMobileCustom ?? false,
+            mobileGridSchema: safeParse(rawRecord.mobileGridSchema, null),
+            enableMobileTheme: rawRecord.enableMobileTheme ?? false,
+            mobileThemeConfig: safeParse(rawRecord.mobileThemeConfig, {}),
+            mobileContainerStyle: rawRecord.mobileContainerStyle || 'transparent',
           };
 
           const publicConfig = {
@@ -368,6 +439,11 @@ export class PluginCustomLoginPageServer extends Plugin {
             themeConfig: fullConfig.themeConfig,
             customBlocks: fullConfig.customBlocks,
             gridSchema: fullConfig.gridSchema,
+            enableMobileCustom: fullConfig.enableMobileCustom,
+            mobileGridSchema: fullConfig.mobileGridSchema,
+            enableMobileTheme: fullConfig.enableMobileTheme,
+            mobileThemeConfig: fullConfig.mobileThemeConfig,
+            mobileContainerStyle: fullConfig.mobileContainerStyle,
           };
 
           // 立即同步更新分布式缓存（Redis）及本地内存，使所有 Pod 实例即刻生效

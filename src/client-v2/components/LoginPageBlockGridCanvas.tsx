@@ -138,6 +138,48 @@ export const DEFAULT_PRESET_GRID_SCHEMA = {
   },
 };
 
+export const DEFAULT_PRESET_MOBILE_GRID_SCHEMA = {
+  use: 'LoginPageBlockGridModel',
+  uid: 'custom_login_page_mobile_grid',
+  props: {
+    colGap: 16,
+    rowGap: 20,
+    layout: {
+      version: 2,
+      rows: [
+        {
+          id: 'row_mobile_login_main',
+          cells: [
+            {
+              id: 'row_mobile_login_main:cell:0',
+              items: ['signin_form_block_mobile_001'],
+            },
+          ],
+          sizes: [24],
+        },
+      ],
+    },
+  },
+  subModels: {
+    items: [
+      {
+        uid: 'signin_form_block_mobile_001',
+        use: 'SignInFormBlockModel',
+        parentId: 'custom_login_page_mobile_grid',
+        subKey: 'items',
+        subType: 'array',
+        props: {
+          title: '欢迎登录',
+          subtitle: '请输入账号密码登录系统',
+          cardBg: 'rgba(255, 255, 255, 0.96)',
+          loginButtonText: '立即登录',
+          buttonColor: '#1677ff',
+        },
+      },
+    ],
+  },
+};
+
 export const LoginPageBlockGridCanvas = forwardRef<LoginPageBlockGridCanvasRef, LoginPageBlockGridCanvasProps>(
   ({ gridSchema, designMode = true, onModelReady, originalSignInComponent }, ref) => {
     const t = useT();

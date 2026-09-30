@@ -2,7 +2,7 @@ import React, { forwardRef, useState, useEffect } from 'react';
 import { theme } from 'antd';
 import { PoweredBy } from '@nocobase/client-v2';
 import { CustomLoginConfig } from '../types';
-import { LoginPageBlockGridCanvas, LoginPageBlockGridCanvasRef } from './LoginPageBlockGridCanvas';
+import { LoginPageBlockGridCanvas, LoginPageBlockGridCanvasRef, DEFAULT_PRESET_MOBILE_GRID_SCHEMA } from './LoginPageBlockGridCanvas';
 
 export interface CustomLoginContainerProps {
   config: CustomLoginConfig;
@@ -10,6 +10,7 @@ export interface CustomLoginContainerProps {
   apiClient?: any;
   designMode?: boolean;
   viewportMode?: 'desktop' | 'tablet' | 'mobile';
+  activeTarget?: 'desktop' | 'mobile';
   onModelReady?: (model: any) => void;
   originalSignInPage?: React.ComponentType;
 }
@@ -174,7 +175,7 @@ export class CustomLoginErrorBoundary extends React.Component<ErrorBoundaryProps
  * 100% 承载官方原生 BlockGrid 画布，支持官方原生拖拽排版与区块设计
  */
 const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, CustomLoginContainerProps>(
-  ({ config, designMode = false, onModelReady, originalSignInPage, viewportMode = 'desktop' }, ref) => {
+  ({ config, designMode = false, onModelReady, originalSignInPage, viewportMode = 'desktop', activeTarget }, ref) => {
     const { token } = theme.useToken();
 
     // 挂载原生登录组件供区块模型使用
@@ -188,7 +189,11 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
       (window as any).__NocobaseOriginalSignInComponent = originalSignInPage;
     }
 
-    const themeConfig = config?.themeConfig || {
+    const isMobileTarget =
+      activeTarget === 'mobile' ||
+      (activeTarget === undefined && viewportMode === 'mobile' && Boolean(config?.enableMobileCustom));
+
+    const baseThemeConfig = config?.themeConfig || {
       brandTitle: 'NocoBase',
       brandSubtitle: '',
       brandLogo: '',
@@ -200,8 +205,21 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
       icp: '',
     };
 
+    const themeConfig =
+      isMobileTarget && config?.enableMobileTheme && config?.mobileThemeConfig && Object.keys(config.mobileThemeConfig).length > 0
+        ? { ...baseThemeConfig, ...config.mobileThemeConfig }
+        : baseThemeConfig;
+
     const canvasWidth = config?.canvasWidth || 'wide';
-    const containerStyle = config?.containerStyle || 'transparent';
+    const containerStyle =
+      isMobileTarget && config?.enableMobileTheme && config?.mobileContainerStyle
+        ? config.mobileContainerStyle
+        : (config?.containerStyle || 'transparent');
+
+    const effectiveGridSchema =
+      isMobileTarget && config?.enableMobileCustom
+        ? (config?.mobileGridSchema || DEFAULT_PRESET_MOBILE_GRID_SCHEMA)
+        : config?.gridSchema;
 
     // 动态计算背景样式
     const getContainerBg = (): React.CSSProperties => {
@@ -408,7 +426,7 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
     return (
       <div
         ref={rootRef}
-        className={`custom-login-page-root custom-login-style-${containerStyle} is-viewport-${viewportMode} ${designMode ? 'is-design-mode' : 'is-preview-mode'} ${isActualSignInRoute ? 'is-actual-signin-route' : 'is-settings-canvas-route'}`}
+        className={`custom-login-page-root custom-login-style-${containerStyle} is-viewport-${viewportMode} is-target-${isMobileTarget ? 'mobile' : 'desktop'} ${designMode ? 'is-design-mode' : 'is-preview-mode'} ${isActualSignInRoute ? 'is-actual-signin-route' : 'is-settings-canvas-route'}`}
         style={{
           containerType: 'inline-size',
           containerName: 'customLoginCanvas',
@@ -840,7 +858,7 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
           <div style={getMainContainerStyle()}>
             <LoginPageBlockGridCanvas
               ref={ref}
-              gridSchema={config.gridSchema}
+              gridSchema={effectiveGridSchema}
               designMode={designMode}
               onModelReady={onModelReady}
               originalSignInComponent={originalSignInPage}
