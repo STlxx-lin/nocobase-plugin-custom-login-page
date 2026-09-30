@@ -12,19 +12,30 @@ export function useT() {
       if (translated && translated !== str) {
         return translated;
       }
-      const currentLang =
-        engine?.context?.locale ||
-        (typeof window !== 'undefined' &&
-          ((window as any).__nocobase_locale__ || localStorage.getItem('NOCOBASE_LOCALE') || navigator.language));
-      if (typeof currentLang === 'string' && currentLang.toLowerCase().includes('zh')) {
-        if ((zhCNJson as any)[str]) {
-          return (zhCNJson as any)[str];
-        }
-      }
-      return translated || str;
     }
-    return (zhCNJson as any)?.[str] || str;
+    const currentLang =
+      engine?.context?.locale ||
+      (typeof window !== 'undefined' &&
+        ((window as any).__nocobase_locale__ || localStorage.getItem('NOCOBASE_LOCALE') || navigator.language));
+    if (typeof currentLang === 'string' && currentLang.toLowerCase().includes('zh')) {
+      if ((zhCNJson as any)[str]) {
+        return (zhCNJson as any)[str];
+      }
+    }
+    return str;
   };
+}
+
+export function t(str: string) {
+  const currentLang =
+    typeof window !== 'undefined' &&
+    ((window as any).__nocobase_locale__ || localStorage.getItem('NOCOBASE_LOCALE') || navigator.language);
+  if (typeof currentLang === 'string' && currentLang.toLowerCase().includes('zh')) {
+    if ((zhCNJson as any)[str]) {
+      return (zhCNJson as any)[str];
+    }
+  }
+  return str;
 }
 
 export function tExpr(key: string) {

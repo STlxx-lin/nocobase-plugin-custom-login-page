@@ -67,6 +67,7 @@ import {
 const { Title, Text } = Typography;
 
 import { compressImageToWebP, ImageInputWithUpload } from './editor/ImageInputWithUpload';
+import { t } from '../locale';
 export { compressImageToWebP, ImageInputWithUpload };
 
 // 安全解析当前应用与自定义图标库选择器（优先检测并使用 @nocobase/plugin-custom-icons 增强图标库）
@@ -909,31 +910,31 @@ export const BlockContentEditorDrawer: React.FC<BlockContentEditorDrawerProps> =
   const getBlockTitle = () => {
     switch (blockUse) {
       case 'CustomHeroBlockModel':
-        return '编辑品牌宣传标语 (Hero)';
+        return t('Edit Hero banner');
       case 'CustomFeaturesBlockModel':
-        return '编辑企业特性矩阵 (Features)';
+        return t('Edit Features matrix');
       case 'CustomStatsBlockModel':
-        return '编辑核心数据看板 (Stats)';
+        return t('Edit Stats dashboard');
       case 'SignInFormBlockModel':
-        return '编辑系统登录表单 (Sign-in Form)';
+        return t('Edit Sign-in Form');
       case 'CustomCarouselBlockModel':
-        return '编辑动态全景轮播 (Carousel)';
+        return t('Edit Dynamic carousel');
       case 'CustomHtmlBlockModel':
-        return '编辑自定义 HTML 代码 (Custom HTML)';
+        return t('Edit Free Code / HTML');
       case 'CustomImageBlockModel':
-        return '编辑宣传插画/图片 (Image)';
+        return t('Edit Illustration / Image');
       case 'CustomNoticeBlockModel':
-        return '编辑平台公告通知条 (Notice)';
+        return t('Edit Notice bar');
       case 'CustomPartnersBlockModel':
-        return '编辑合作伙伴 Logo 墙 (Partners)';
+        return t('Edit Partners logo wall');
       case 'CustomContactBlockModel':
-        return '编辑客服支持与二维码 (Contact & Support)';
+        return t('Edit Contact & Support');
       case 'CustomLanguageBlockModel':
-        return '编辑多语言环境切换 (Language Switcher)';
+        return t('Edit Language Switcher');
       case 'CustomCountdownBlockModel':
-        return '编辑活动倒计时看板 (Event Countdown)';
+        return t('Edit Event Countdown');
       default:
-        return '编辑区块内容与属性';
+        return t('Edit block content & properties');
     }
   };
 

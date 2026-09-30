@@ -749,7 +749,7 @@ export class SignInFormBlockModel extends CustomLoginBlockModel {
 }
 
 SignInFormBlockModel.define({
-  label: tExpr('系统登录表单 (Sign-in Form)'),
+  label: tExpr('Sign-in Form'),
   hide: true,
   createModelOptions: {
     use: 'SignInFormBlockModel',
@@ -875,7 +875,7 @@ export class CustomHeroBlockModel extends CustomLoginBlockModel {
 }
 
 CustomHeroBlockModel.define({
-  label: tExpr('品牌宣传标语 (Hero)'),
+  label: tExpr('Hero banner'),
   hide: true,
   createModelOptions: {
     use: 'CustomHeroBlockModel',
@@ -991,7 +991,7 @@ export class CustomFeaturesBlockModel extends CustomLoginBlockModel {
 }
 
 CustomFeaturesBlockModel.define({
-  label: tExpr('企业特性矩阵 (Features)'),
+  label: tExpr('Features matrix'),
   hide: true,
   createModelOptions: {
     use: 'CustomFeaturesBlockModel',
@@ -1069,7 +1069,7 @@ export class CustomStatsBlockModel extends CustomLoginBlockModel {
 }
 
 CustomStatsBlockModel.define({
-  label: tExpr('核心数据看板 (Stats)'),
+  label: tExpr('Stats dashboard'),
   hide: true,
   createModelOptions: {
     use: 'CustomStatsBlockModel',
@@ -1180,7 +1180,7 @@ export class CustomCarouselBlockModel extends CustomLoginBlockModel {
 }
 
 CustomCarouselBlockModel.define({
-  label: tExpr('动态全景轮播 (Carousel)'),
+  label: tExpr('Dynamic carousel'),
   hide: true,
   createModelOptions: {
     use: 'CustomCarouselBlockModel',
@@ -1269,7 +1269,7 @@ export class CustomImageBlockModel extends CustomLoginBlockModel {
 }
 
 CustomImageBlockModel.define({
-  label: tExpr('宣传插画 / 图片展示 (Image)'),
+  label: tExpr('Illustration / Image'),
   hide: true,
   createModelOptions: {
     use: 'CustomImageBlockModel',
@@ -1631,7 +1631,7 @@ export class CustomNoticeBlockModel extends CustomLoginBlockModel {
 }
 
 CustomNoticeBlockModel.define({
-  label: tExpr('平台公告通知条 (Notice)'),
+  label: tExpr('Notice bar'),
   hide: true,
   createModelOptions: {
     use: 'CustomNoticeBlockModel',
@@ -2039,7 +2039,7 @@ export class CustomPartnersBlockModel extends CustomLoginBlockModel {
 }
 
 CustomPartnersBlockModel.define({
-  label: tExpr('合作伙伴 Logo 墙 (Partners)'),
+  label: tExpr('Partners logo wall'),
   hide: true,
   createModelOptions: {
     use: 'CustomPartnersBlockModel',
@@ -2543,7 +2543,7 @@ export class CustomContactBlockModel extends CustomLoginBlockModel {
 }
 
 CustomContactBlockModel.define({
-  label: tExpr('客服支持与二维码 (Contact & Support)'),
+  label: tExpr('Contact & Support'),
   hide: true,
   createModelOptions: {
     use: 'CustomContactBlockModel',
