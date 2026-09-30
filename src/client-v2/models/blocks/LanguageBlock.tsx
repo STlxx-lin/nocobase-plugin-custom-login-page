@@ -50,6 +50,7 @@ export const LanguageSwitcherInner: React.FC<{ model: any }> = ({ model }) => {
 
   return (
     <div
+      className="custom-language-inner"
       style={{
         display: 'flex',
         justifyContent: align === 'left' ? 'flex-start' : align === 'center' ? 'center' : 'flex-end',
@@ -93,6 +94,7 @@ export class CustomLanguageBlockModel extends CustomLoginBlockModel {
           if (el) (el as any).__customBlockModel = this;
         }}
         data-custom-block-root="true"
+        className="custom-block-language custom-language-card"
         style={{ position: 'relative', width: '100%', margin: '8px 0' }}
       >
         <LanguageSwitcherInner model={this} />

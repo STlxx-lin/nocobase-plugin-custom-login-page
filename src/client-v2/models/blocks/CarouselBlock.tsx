@@ -37,6 +37,7 @@ export class CustomCarouselBlockModel extends CustomLoginBlockModel {
           if (el) (el as any).__customBlockModel = this;
         }}
         data-custom-block-root="true"
+        className="custom-block-carousel custom-carousel-card"
         style={{ position: 'relative', width: '100%', margin: '14px 0' }}
       >
         <div style={{ borderRadius: 16, overflow: 'hidden', width: '100%', boxShadow: '0 12px 36px rgba(0, 0, 0, 0.2)' }}>
@@ -51,6 +52,7 @@ export class CustomCarouselBlockModel extends CustomLoginBlockModel {
               return (
                 <div key={idx}>
                   <div
+                    className="custom-carousel-slide"
                     style={{
                       height,
                       background: bgStyle,

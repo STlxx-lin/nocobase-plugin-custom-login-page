@@ -23,9 +23,11 @@ export class CustomStatsBlockModel extends CustomLoginBlockModel {
           if (el) (el as any).__customBlockModel = this;
         }}
         data-custom-block-root="true"
+        className="custom-block-stats custom-stats-card"
         style={{ position: 'relative', width: '100%', margin: '14px 0' }}
       >
         <div
+          className="custom-stats-card-inner"
           style={{
             padding: '24px 28px',
             borderRadius: 18,
@@ -38,10 +40,11 @@ export class CustomStatsBlockModel extends CustomLoginBlockModel {
             boxSizing: 'border-box',
           }}
         >
-          <Row gutter={[24, 16]} justify="space-around" align="middle">
+          <Row className="custom-stats-row" gutter={[24, 16]} justify="space-around" align="middle">
             {items.map((it: any, idx: number) => (
-              <Col key={idx} xs={12} sm={6} style={{ textAlign: 'center' }}>
+              <Col key={idx} xs={12} sm={6} className="custom-stats-col" style={{ textAlign: 'center' }}>
                 <div
+                  className="custom-stats-value"
                   style={{
                     fontSize: it.valueSize ? (typeof it.valueSize === 'number' ? `${it.valueSize}px` : it.valueSize) : 'clamp(24px, 2.6vw, 36px)',
                     fontWeight: 800,
@@ -55,6 +58,7 @@ export class CustomStatsBlockModel extends CustomLoginBlockModel {
                   {it.value}
                 </div>
                 <div
+                  className="custom-stats-label"
                   style={{
                     color: it.labelColor || 'rgba(255, 255, 255, 0.85)',
                     fontSize: it.labelSize ? (typeof it.labelSize === 'number' ? `${it.labelSize}px` : it.labelSize) : 13,

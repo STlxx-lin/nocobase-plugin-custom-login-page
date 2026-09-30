@@ -422,6 +422,7 @@ export class SignInFormBlockModel extends CustomLoginBlockModel {
           if (el) (el as any).__customBlockModel = this;
         }}
         data-custom-block-root="true"
+        className="custom-block-signin custom-signin-card-wrapper"
         style={{
           position: 'relative',
           width: '100%',

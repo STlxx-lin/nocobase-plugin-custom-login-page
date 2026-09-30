@@ -242,7 +242,7 @@ export const ContactSupportInner: React.FC<{ model: any }> = ({ model }) => {
 
   return (
     <div
-      className="custom-contact-card"
+      className="custom-block-contact custom-contact-card"
       style={{
         background: theme.cardBg,
         borderRadius,
@@ -299,6 +299,7 @@ export const ContactSupportInner: React.FC<{ model: any }> = ({ model }) => {
 
       {/* 主体区：左右或上下排列 */}
       <div
+        className="custom-contact-body"
         style={{
           display: 'flex',
           flexDirection: layout === 'vertical' ? 'column' : 'row',
@@ -308,7 +309,7 @@ export const ContactSupportInner: React.FC<{ model: any }> = ({ model }) => {
       >
         {/* 二维码区域 */}
         {showQrCode && rawQrCode && (
-          <div style={{ textAlign: 'center', flexShrink: 0 }}>
+          <div className="custom-contact-qr-wrapper" style={{ textAlign: 'center', flexShrink: 0 }}>
             <div
               style={{
                 position: 'relative',
@@ -404,6 +405,7 @@ export const ContactSupportInner: React.FC<{ model: any }> = ({ model }) => {
 
         {/* 联系方式列表 */}
         <div
+          className="custom-contact-list"
           style={{
             flex: 1,
             display: 'flex',
@@ -418,6 +420,7 @@ export const ContactSupportInner: React.FC<{ model: any }> = ({ model }) => {
             return (
               <div
                 key={idx}
+                className="custom-contact-item"
                 onClick={() => isClickable && handleAction(item)}
                 style={{
                   display: 'flex',

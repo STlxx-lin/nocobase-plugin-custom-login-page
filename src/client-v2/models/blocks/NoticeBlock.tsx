@@ -151,7 +151,7 @@ export const CustomNoticeInner: React.FC<{ props: any; model: any }> = ({ props,
         if (el) (el as any).__customBlockModel = model;
       }}
       data-custom-block-root="true"
-      className="custom-notice-card"
+      className="custom-block-notice custom-notice-card"
       style={{
         position: 'relative',
         width: '100%',
@@ -255,7 +255,7 @@ export const CustomNoticeInner: React.FC<{ props: any; model: any }> = ({ props,
       </div>
 
       {/* 右侧操作区：行动呼吁 CTA 与关闭按钮 */}
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, flexShrink: 0, marginLeft: 12, zIndex: 2 }}>
+      <div className="custom-notice-cta" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, flexShrink: 0, marginLeft: 12, zIndex: 2 }}>
         {linkUrl && ctaType !== 'none' && (
           ctaType === 'button' ? (
             <a

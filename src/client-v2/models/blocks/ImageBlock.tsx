@@ -19,10 +19,12 @@ export class CustomImageBlockModel extends CustomLoginBlockModel {
           if (el) (el as any).__customBlockModel = this;
         }}
         data-custom-block-root="true"
+        className="custom-block-image custom-image-card"
         style={{ position: 'relative', width: '100%', margin: '14px 0' }}
       >
         <div style={{ width: '100%', textAlign: 'center' }}>
           <img
+            className="custom-image-content"
             src={url}
             alt={caption || 'Banner'}
             style={{

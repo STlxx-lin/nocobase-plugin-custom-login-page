@@ -97,6 +97,7 @@ export const PartnerItemCard: React.FC<{
   return (
     <div
       key={idx}
+      className="custom-partners-item-card"
       style={{
         height: 54,
         minWidth: minWidth || undefined,
@@ -238,7 +239,7 @@ export const PartnersInner: React.FC<{ model: any }> = ({ model }) => {
 
   return (
     <div
-      className="custom-partners-card"
+      className="custom-block-partners custom-partners-card"
       style={{
         background: theme.cardBg,
         borderRadius,
@@ -370,9 +371,9 @@ export const PartnersInner: React.FC<{ model: any }> = ({ model }) => {
         </div>
       ) : (
         /* 经典响应式网格平铺模式 (支持行数截取) */
-        <Row gutter={[16, 16]} align="middle" justify="center">
+        <Row className="custom-partners-grid-row" gutter={[16, 16]} align="middle" justify="center">
           {gridVisibleItems.map((item: any, idx: number) => (
-            <Col span={span} key={idx} xs={12} sm={12} md={span}>
+            <Col className="custom-partners-grid-col" span={span} key={idx} xs={12} sm={12} md={span}>
               <PartnerItemCard
                 item={item}
                 idx={idx}

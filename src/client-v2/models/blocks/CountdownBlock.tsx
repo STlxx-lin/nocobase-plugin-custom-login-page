@@ -139,8 +139,9 @@ export const CountdownInner: React.FC<{ model: any }> = ({ model }) => {
   }, [targetDate]);
 
   const renderNumberCard = (num: number, label: string, isSec = false) => (
-    <div style={{ textAlign: 'center', minWidth: 62 }}>
+    <div className="custom-countdown-number-card" style={{ textAlign: 'center', minWidth: 62 }}>
       <div
+        className="custom-countdown-number-box"
         style={{
           position: 'relative',
           background: digitBg,
@@ -177,6 +178,7 @@ export const CountdownInner: React.FC<{ model: any }> = ({ model }) => {
         {String(num).padStart(2, '0')}
       </div>
       <div
+        className="custom-countdown-number-label"
         style={{
           fontSize: 12,
           color: 'rgba(255, 255, 255, 0.78)',
@@ -192,6 +194,7 @@ export const CountdownInner: React.FC<{ model: any }> = ({ model }) => {
 
   return (
     <div
+      className="custom-block-countdown custom-countdown-card"
       style={{
         background: props.customBg || theme.background,
         borderRadius: 20,
@@ -305,19 +308,19 @@ export const CountdownInner: React.FC<{ model: any }> = ({ model }) => {
             {endNotice}
           </div>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div className="custom-countdown-digits" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             {renderNumberCard(timeLeft.days, '天')}
-            <span style={{ fontSize: 22, fontWeight: 700, color: 'rgba(255, 255, 255, 0.45)', margin: '0 -2px 18px -2px' }}>
+            <span className="custom-countdown-colon" style={{ fontSize: 22, fontWeight: 700, color: 'rgba(255, 255, 255, 0.45)', margin: '0 -2px 18px -2px' }}>
               :
             </span>
             {renderNumberCard(timeLeft.hours, '时')}
-            <span style={{ fontSize: 22, fontWeight: 700, color: 'rgba(255, 255, 255, 0.45)', margin: '0 -2px 18px -2px' }}>
+            <span className="custom-countdown-colon" style={{ fontSize: 22, fontWeight: 700, color: 'rgba(255, 255, 255, 0.45)', margin: '0 -2px 18px -2px' }}>
               :
             </span>
             {renderNumberCard(timeLeft.minutes, '分')}
             {showSeconds && (
               <>
-                <span style={{ fontSize: 22, fontWeight: 700, color: 'rgba(255, 255, 255, 0.45)', margin: '0 -2px 18px -2px' }}>
+                <span className="custom-countdown-colon" style={{ fontSize: 22, fontWeight: 700, color: 'rgba(255, 255, 255, 0.45)', margin: '0 -2px 18px -2px' }}>
                   :
                 </span>
                 {renderNumberCard(timeLeft.seconds, '秒', true)}
@@ -329,6 +332,7 @@ export const CountdownInner: React.FC<{ model: any }> = ({ model }) => {
         {/* 行动按钮 */}
         {showButton && buttonText && (
           <Button
+            className="custom-countdown-btn"
             type="primary"
             size="large"
             style={{

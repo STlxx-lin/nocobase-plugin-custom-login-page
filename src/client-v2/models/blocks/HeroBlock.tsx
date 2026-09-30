@@ -35,9 +35,11 @@ export class CustomHeroBlockModel extends CustomLoginBlockModel {
           if (el) (el as any).__customBlockModel = this;
         }}
         data-custom-block-root="true"
+        className="custom-block-hero custom-hero-card"
         style={{ position: 'relative', width: '100%' }}
       >
         <div
+          className="custom-hero-inner"
           style={{
             padding: '24px 12px',
             textAlign: align,

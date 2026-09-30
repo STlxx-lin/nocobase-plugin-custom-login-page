@@ -43,6 +43,7 @@ export class CustomFeaturesBlockModel extends CustomLoginBlockModel {
           if (el) (el as any).__customBlockModel = this;
         }}
         data-custom-block-root="true"
+        className="custom-block-features custom-features-card"
         style={{ position: 'relative', width: '100%', padding: '12px 0', overflow: 'hidden' }}
       >
         <Row gutter={[18, 18]} style={{ margin: 0 }}>
@@ -52,6 +53,7 @@ export class CustomFeaturesBlockModel extends CustomLoginBlockModel {
             return (
               <Col xs={24} sm={12} md={span} key={idx}>
                 <div
+                  className="custom-features-item"
                   style={{
                     height: '100%',
                     padding: 22,

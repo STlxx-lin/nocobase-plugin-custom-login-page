@@ -23,9 +23,10 @@ export class CustomHtmlBlockModel extends CustomLoginBlockModel {
           if (el) (el as any).__customBlockModel = this;
         }}
         data-custom-block-root="true"
+        className="custom-block-html custom-html-card"
         style={{ position: 'relative', width: '100%', margin: '12px 0' }}
       >
-        <div dangerouslySetInnerHTML={{ __html: cleanHtml }} style={{ width: '100%' }} />
+        <div className="custom-html-content" dangerouslySetInnerHTML={{ __html: cleanHtml }} style={{ width: '100%' }} />
       </div>
     );
   }
