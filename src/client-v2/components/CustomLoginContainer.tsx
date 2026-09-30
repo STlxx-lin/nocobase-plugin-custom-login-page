@@ -346,6 +346,7 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
     };
 
     const isLightBg = isLightBackground();
+    const isWhiteMode = containerStyle === 'card' || (containerStyle === 'transparent' && isLightBg);
 
     // 合规页脚：遵从 NocoBase 开源协议规范，原样保留官方 PoweredBy 品牌、名称、链接与版本，融合用户自定义版权及 ICP
     const renderFooter = () => (
@@ -435,7 +436,7 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
     return (
       <div
         ref={rootRef}
-        className={`custom-login-page-root custom-login-style-${containerStyle} is-viewport-${viewportMode} is-target-${isMobileTarget ? 'mobile' : 'desktop'} ${designMode ? 'is-design-mode' : 'is-preview-mode'} ${isActualSignInRoute ? 'is-actual-signin-route' : 'is-settings-canvas-route'}`}
+        className={`custom-login-page-root custom-login-style-${containerStyle} ${isWhiteMode ? 'is-white-mode' : 'is-dark-mode'} is-viewport-${viewportMode} is-target-${isMobileTarget ? 'mobile' : 'desktop'} ${designMode ? 'is-design-mode' : 'is-preview-mode'} ${isActualSignInRoute ? 'is-actual-signin-route' : 'is-settings-canvas-route'}`}
         style={{
           containerType: 'inline-size',
           containerName: 'customLoginCanvas',
@@ -630,6 +631,98 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
           .custom-login-style-card .nb-markdown-vditor,
           .custom-login-style-card .nb-markdown-vditor * {
             color: #1e293b !important;
+          }
+
+          /* === 核心：白曜大卡片与浅色模式下 PartnersBlock (合作 Logo 墙) 智能转黑与高雅微嵌 === */
+          .custom-login-style-card .custom-partners-title,
+          .custom-login-page-root.is-white-mode .custom-partners-title,
+          .custom-login-style-card .custom-block-partners span,
+          .custom-login-page-root.is-white-mode .custom-block-partners span {
+            color: #475569 !important;
+            text-shadow: none !important;
+          }
+          .custom-login-style-card .custom-partners-card,
+          .custom-login-page-root.is-white-mode .custom-partners-card {
+            background: transparent !important;
+            box-shadow: none !important;
+            border-color: rgba(0, 0, 0, 0.06) !important;
+          }
+          .custom-login-style-card .custom-partners-item-card,
+          .custom-login-page-root.is-white-mode .custom-partners-item-card {
+            background: #f8fafc !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03) !important;
+          }
+          .custom-login-style-card .custom-partners-item-card:hover,
+          .custom-login-page-root.is-white-mode .custom-partners-item-card:hover {
+            background: #f1f5f9 !important;
+            border-color: #cbd5e1 !important;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06) !important;
+          }
+          /* 彻底解决“白底白Logo”：当处于白色卡片或浅色底时，反相白色微光Logo自动自适应转为高级深黑单色！ */
+          .custom-login-style-card .custom-partners-logo-img.custom-partners-filter-white,
+          .custom-login-page-root.is-white-mode .custom-partners-logo-img.custom-partners-filter-white,
+          .custom-login-style-card .custom-partners-item-card img[style*="invert"],
+          .custom-login-page-root.is-white-mode .custom-partners-item-card img[style*="invert"] {
+            filter: brightness(0) opacity(0.72) !important;
+          }
+          .custom-login-style-card .custom-partners-item-card:hover .custom-partners-logo-img.custom-partners-filter-white,
+          .custom-login-page-root.is-white-mode .custom-partners-item-card:hover .custom-partners-logo-img.custom-partners-filter-white,
+          .custom-login-style-card .custom-partners-item-card:hover img[style*="invert"],
+          .custom-login-page-root.is-white-mode .custom-partners-item-card:hover img[style*="invert"] {
+            filter: brightness(0) opacity(1) !important;
+          }
+          .custom-login-style-card .custom-partners-item-name,
+          .custom-login-page-root.is-white-mode .custom-partners-item-name {
+            color: #1e293b !important;
+          }
+
+          /* === 白曜大卡片下核心数据看板 (StatsBlock) 质感微嵌 === */
+          .custom-login-style-card .custom-stats-card-inner,
+          .custom-login-page-root.is-white-mode .custom-stats-card-inner {
+            background: #f8fafc !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04) !important;
+          }
+          .custom-login-style-card .custom-stats-label,
+          .custom-login-page-root.is-white-mode .custom-stats-label {
+            color: #475569 !important;
+          }
+
+          /* === 白曜大卡片下倒计时 (CountdownBlock) 高对比度自适应 === */
+          .custom-login-style-card .custom-countdown-card h2,
+          .custom-login-page-root.is-white-mode .custom-countdown-card h2,
+          .custom-login-style-card .custom-countdown-card h3,
+          .custom-login-page-root.is-white-mode .custom-countdown-card h3 {
+            color: #0f172a !important;
+          }
+          .custom-login-style-card .custom-countdown-card p,
+          .custom-login-page-root.is-white-mode .custom-countdown-card p {
+            color: #475569 !important;
+          }
+          .custom-login-style-card .custom-countdown-colon,
+          .custom-login-page-root.is-white-mode .custom-countdown-colon {
+            color: #0f172a !important;
+          }
+          .custom-login-style-card .custom-countdown-number-label,
+          .custom-login-page-root.is-white-mode .custom-countdown-number-label {
+            color: #64748b !important;
+          }
+
+          /* === 白曜大卡片下客服支持 (ContactBlock) 质感微嵌 === */
+          .custom-login-style-card .custom-contact-card h3,
+          .custom-login-page-root.is-white-mode .custom-contact-card h3 {
+            color: #0f172a !important;
+          }
+          .custom-login-style-card .custom-contact-card p,
+          .custom-login-page-root.is-white-mode .custom-contact-card p {
+            color: #475569 !important;
+          }
+          .custom-login-style-card .custom-contact-item,
+          .custom-login-page-root.is-white-mode .custom-contact-item {
+            background: #f8fafc !important;
+            border: 1px solid #e2e8f0 !important;
+            color: #334155 !important;
           }
 
           /* === 黑曜科技大卡片 (custom-login-style-dark-card) 内部深邃太空与未来科技质感 === */

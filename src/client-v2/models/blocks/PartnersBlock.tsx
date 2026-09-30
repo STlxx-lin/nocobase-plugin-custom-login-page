@@ -86,6 +86,11 @@ export const PartnerItemCard: React.FC<{
         ? 'brightness(0) invert(1) opacity(1) drop-shadow(0 0 5px rgba(255,255,255,0.7))'
         : 'brightness(0) invert(1) opacity(0.72)';
     }
+    if (filterMode === 'black') {
+      return isHovered
+        ? 'brightness(0) opacity(1)'
+        : 'brightness(0) opacity(0.72)';
+    }
     if (filterMode === 'grayscale') {
       return isHovered
         ? 'grayscale(0%) opacity(1)'
@@ -97,7 +102,7 @@ export const PartnerItemCard: React.FC<{
   return (
     <div
       key={idx}
-      className="custom-partners-item-card"
+      className={`custom-partners-item-card custom-partners-filter-${filterMode}`}
       style={{
         height: 54,
         minWidth: minWidth || undefined,
@@ -127,6 +132,7 @@ export const PartnerItemCard: React.FC<{
           src={item.logo}
           alt={item.name || `Partner ${idx + 1}`}
           onError={() => setImgError(true)}
+          className={`custom-partners-logo-img custom-partners-filter-${filterMode}`}
           style={{
             maxHeight: 34,
             maxWidth: '100%',
@@ -138,6 +144,7 @@ export const PartnerItemCard: React.FC<{
         />
       ) : (
         <span
+          className="custom-partners-item-name"
           style={{
             color: theme.titleColor,
             fontWeight: 600,
@@ -271,6 +278,7 @@ export const PartnersInner: React.FC<{ model: any }> = ({ model }) => {
       {title && (
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
           <span
+            className="custom-partners-title"
             style={{
               fontSize: props.titleFontSize ? (typeof props.titleFontSize === 'number' ? `${props.titleFontSize}px` : props.titleFontSize) : 13,
               fontWeight: 600,

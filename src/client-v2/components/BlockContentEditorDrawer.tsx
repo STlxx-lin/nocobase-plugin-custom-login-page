@@ -2858,6 +2858,7 @@ export const BlockContentEditorDrawer: React.FC<BlockContentEditorDrawerProps> =
               <Form.Item name="filterMode" label="Logo 色彩滤镜" initialValue="grayscale">
                 <Radio.Group buttonStyle="solid" style={{ width: '100%' }}>
                   <Space direction="vertical" style={{ width: '100%' }}>
+                    <Radio value="black">🖤 统一高级深黑单色 (浅色壁纸/白色大卡片顶级推荐，Logo 统一纯黑高雅)</Radio>
                     <Radio value="white">💎 统一高级纯白微光 (深色壁纸顶级推荐，Logo 统一纯白高光)</Radio>
                     <Radio value="grayscale">🎨 经典灰度微透 (默认灰度微透，鼠标悬停平滑恢复全彩)</Radio>
                     <Radio value="original">🌈 原始全彩展示 (保持原有真实色彩呈现)</Radio>

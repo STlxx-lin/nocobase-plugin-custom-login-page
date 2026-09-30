@@ -152,4 +152,28 @@ describe('Responsive Layout Engine (Container Queries & Viewport Mode)', () => {
     expect(cssRules).toContain('.custom-login-style-transparent .custom-login-card-container');
     expect(cssRules).toContain('border-radius: 0 !important');
   });
+
+  it('verifies white-mode semantic classnames and logo black filter support in PartnersBlock', () => {
+    const card = document.createElement('div');
+    card.className = 'custom-login-page-root custom-login-style-card is-white-mode';
+
+    const partners = document.createElement('div');
+    partners.className = 'custom-block-partners custom-partners-card';
+    partners.innerHTML = `
+      <div class="custom-partners-title">深受全球顶级云厂商与技术基建信赖</div>
+      <div class="custom-partners-item-card custom-partners-filter-white">
+        <img class="custom-partners-logo-img custom-partners-filter-white" style="filter: brightness(0) invert(1);" />
+      </div>
+      <div class="custom-partners-item-card custom-partners-filter-black">
+        <img class="custom-partners-logo-img custom-partners-filter-black" style="filter: brightness(0) opacity(0.72);" />
+      </div>
+    `;
+    card.appendChild(partners);
+    document.body.appendChild(card);
+
+    expect(card.classList.contains('is-white-mode')).toBe(true);
+    expect(card.querySelector('.custom-partners-title')).not.toBeNull();
+    expect(card.querySelector('.custom-partners-logo-img.custom-partners-filter-white')).not.toBeNull();
+    expect(card.querySelector('.custom-partners-logo-img.custom-partners-filter-black')).not.toBeNull();
+  });
 });
