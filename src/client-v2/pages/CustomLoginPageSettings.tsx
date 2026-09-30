@@ -787,6 +787,7 @@ export const CustomLoginPageSettings: React.FC = () => {
 
       {/* 1:1 纯正官方原生区块设计器画布区域 */}
       <div
+        className={`custom-login-viewport-wrapper is-viewport-${viewportMode}`}
         style={{
           border: `1px solid ${token.colorBorderSecondary}`,
           borderRadius: viewportMode === 'mobile' ? 32 : viewportMode === 'tablet' ? 24 : 16,
@@ -826,6 +827,7 @@ export const CustomLoginPageSettings: React.FC = () => {
             ref={canvasRef}
             config={config}
             designMode={designMode}
+            viewportMode={viewportMode}
             onModelReady={handleCanvasReady}
           />
         )}

@@ -9,6 +9,7 @@ export interface CustomLoginContainerProps {
   children?: React.ReactNode;
   apiClient?: any;
   designMode?: boolean;
+  viewportMode?: 'desktop' | 'tablet' | 'mobile';
   onModelReady?: (model: any) => void;
   originalSignInPage?: React.ComponentType;
 }
@@ -173,7 +174,7 @@ export class CustomLoginErrorBoundary extends React.Component<ErrorBoundaryProps
  * 100% 承载官方原生 BlockGrid 画布，支持官方原生拖拽排版与区块设计
  */
 const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, CustomLoginContainerProps>(
-  ({ config, designMode = false, onModelReady, originalSignInPage }, ref) => {
+  ({ config, designMode = false, onModelReady, originalSignInPage, viewportMode = 'desktop' }, ref) => {
     const { token } = theme.useToken();
 
     // 挂载原生登录组件供区块模型使用
@@ -407,8 +408,10 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
     return (
       <div
         ref={rootRef}
-        className={`custom-login-page-root custom-login-style-${containerStyle} ${designMode ? 'is-design-mode' : 'is-preview-mode'} ${isActualSignInRoute ? 'is-actual-signin-route' : 'is-settings-canvas-route'}`}
+        className={`custom-login-page-root custom-login-style-${containerStyle} is-viewport-${viewportMode} ${designMode ? 'is-design-mode' : 'is-preview-mode'} ${isActualSignInRoute ? 'is-actual-signin-route' : 'is-settings-canvas-route'}`}
         style={{
+          containerType: 'inline-size',
+          containerName: 'customLoginCanvas',
           minHeight: isActualSignInRoute ? '100vh' : '460px',
           height: isActualSignInRoute ? '100vh' : 'auto',
           width: isActualSignInRoute ? '100vw' : '100%',
@@ -421,6 +424,7 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
           bottom: isActualSignInRoute ? 0 : undefined,
           zIndex: isActualSignInRoute ? 1000 : undefined,
           overflowY: isActualSignInRoute ? 'auto' : 'visible',
+          overflowX: 'hidden',
           boxSizing: 'border-box',
           ...getContainerBg(),
         }}
@@ -624,7 +628,139 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
           }
 
-          /* === 移动端与平板窄屏流式响应式自适应 === */
+          /* === 全局三维一体流式响应式排版引擎（Container Query + Viewport Class + Media Query） === */
+
+          /* 1. 后台视口仿真器激活（.is-viewport-mobile / .is-viewport-tablet） */
+          .custom-login-page-root.is-viewport-mobile .custom-login-main-viewport,
+          .custom-login-viewport-wrapper.is-viewport-mobile .custom-login-main-viewport {
+            padding: 16px 10px !important;
+            align-items: flex-start !important;
+          }
+
+          .custom-login-page-root.is-viewport-mobile [data-grid-root] > .ant-row,
+          .custom-login-page-root.is-viewport-mobile [data-grid-root] .ant-row,
+          .custom-login-page-root.is-viewport-mobile [data-grid-row-id],
+          .custom-login-viewport-wrapper.is-viewport-mobile [data-grid-root] > .ant-row,
+          .custom-login-viewport-wrapper.is-viewport-mobile [data-grid-root] .ant-row,
+          .custom-login-viewport-wrapper.is-viewport-mobile [data-grid-row-id] {
+            flex-direction: column !important;
+            display: flex !important;
+            width: 100% !important;
+            row-gap: 20px !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+          }
+
+          .custom-login-page-root.is-viewport-mobile [data-grid-column-row-id],
+          .custom-login-page-root.is-viewport-mobile [data-grid-root] .ant-col,
+          .custom-login-page-root.is-viewport-mobile [data-grid-root] [class*="ant-col-"],
+          .custom-login-viewport-wrapper.is-viewport-mobile [data-grid-column-row-id],
+          .custom-login-viewport-wrapper.is-viewport-mobile [data-grid-root] .ant-col,
+          .custom-login-viewport-wrapper.is-viewport-mobile [data-grid-root] [class*="ant-col-"] {
+            display: block !important;
+            flex: 0 0 100% !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+          }
+
+          .custom-login-page-root.is-viewport-mobile .custom-signin-card,
+          .custom-login-page-root.is-viewport-mobile [data-custom-block-root] .custom-signin-card,
+          .custom-login-viewport-wrapper.is-viewport-mobile .custom-signin-card,
+          .custom-login-viewport-wrapper.is-viewport-mobile [data-custom-block-root] .custom-signin-card {
+            max-width: 100% !important;
+            width: 100% !important;
+            margin: 0 auto !important;
+            padding: 22px 18px !important;
+            box-sizing: border-box !important;
+          }
+
+          .custom-login-page-root.is-viewport-mobile [data-custom-block-root] h1,
+          .custom-login-page-root.is-viewport-mobile [data-custom-block-root] .ant-typography h1,
+          .custom-login-viewport-wrapper.is-viewport-mobile [data-custom-block-root] h1,
+          .custom-login-viewport-wrapper.is-viewport-mobile [data-custom-block-root] .ant-typography h1 {
+            font-size: 26px !important;
+            line-height: 1.3 !important;
+            margin-bottom: 8px !important;
+          }
+
+          .custom-login-page-root.is-viewport-mobile [data-custom-block-root] p,
+          .custom-login-page-root.is-viewport-mobile [data-custom-block-root] .ant-typography,
+          .custom-login-viewport-wrapper.is-viewport-mobile [data-custom-block-root] p,
+          .custom-login-viewport-wrapper.is-viewport-mobile [data-custom-block-root] .ant-typography {
+            font-size: 13.5px !important;
+            line-height: 1.5 !important;
+          }
+
+          .custom-login-page-root.is-viewport-mobile [data-custom-block-root] .ant-row > .ant-col,
+          .custom-login-viewport-wrapper.is-viewport-mobile [data-custom-block-root] .ant-row > .ant-col {
+            flex: 0 0 100% !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            margin-bottom: 12px !important;
+          }
+
+          .custom-login-page-root.is-viewport-mobile [data-custom-block-root] .custom-notice-card,
+          .custom-login-viewport-wrapper.is-viewport-mobile [data-custom-block-root] .custom-notice-card {
+            padding: 8px 12px !important;
+          }
+
+          /* 2. 现代 CSS 容器查询（Container Queries）：只要父容器宽度 <= 768px 自动折叠排版 */
+          @container customLoginCanvas (max-width: 768px) {
+            .custom-login-main-viewport {
+              padding: 16px 12px !important;
+              align-items: flex-start !important;
+            }
+            [data-grid-root] > .ant-row,
+            [data-grid-root] .ant-row,
+            [data-grid-row-id] {
+              flex-direction: column !important;
+              display: flex !important;
+              width: 100% !important;
+              row-gap: 20px !important;
+              margin-left: 0 !important;
+              margin-right: 0 !important;
+            }
+            [data-grid-column-row-id],
+            [data-grid-root] .ant-col,
+            [data-grid-root] [class*="ant-col-"] {
+              display: block !important;
+              flex: 0 0 100% !important;
+              max-width: 100% !important;
+              width: 100% !important;
+              padding-left: 0 !important;
+              padding-right: 0 !important;
+            }
+            .custom-signin-card,
+            [data-custom-block-root] .custom-signin-card {
+              max-width: 100% !important;
+              width: 100% !important;
+              margin: 0 auto !important;
+              padding: 22px 18px !important;
+              box-sizing: border-box !important;
+            }
+            [data-custom-block-root] h1,
+            [data-custom-block-root] .ant-typography h1 {
+              font-size: 26px !important;
+              line-height: 1.3 !important;
+            }
+            [data-custom-block-root] p,
+            [data-custom-block-root] .ant-typography {
+              font-size: 13.5px !important;
+            }
+            [data-custom-block-root] .ant-row > .ant-col {
+              flex: 0 0 100% !important;
+              max-width: 100% !important;
+              width: 100% !important;
+              margin-bottom: 12px !important;
+            }
+            [data-custom-block-root] .custom-notice-card {
+              padding: 8px 12px !important;
+            }
+          }
+
+          /* 3. 真实终端视口媒体查询（Media Query）：物理真机访问自适应 */
           @media (max-width: 768px) {
             .custom-login-page-root.is-actual-signin-route {
               -webkit-overflow-scrolling: touch;
@@ -636,15 +772,51 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
               padding: 16px 12px !important;
               align-items: flex-start !important;
             }
-            .custom-login-page-root .nb-block-grid [class*="nb-row"],
-            .custom-login-page-root .nb-block-grid .ant-row {
+            .custom-login-page-root [data-grid-root] > .ant-row,
+            .custom-login-page-root [data-grid-root] .ant-row,
+            .custom-login-page-root [data-grid-row-id] {
               flex-direction: column !important;
-            }
-            .custom-login-page-root .nb-block-grid [class*="nb-col"],
-            .custom-login-page-root .nb-block-grid .ant-col {
+              display: flex !important;
               width: 100% !important;
-              max-width: 100% !important;
+              row-gap: 20px !important;
+              margin-left: 0 !important;
+              margin-right: 0 !important;
+            }
+            .custom-login-page-root [data-grid-column-row-id],
+            .custom-login-page-root [data-grid-root] .ant-col,
+            .custom-login-page-root [data-grid-root] [class*="ant-col-"] {
+              display: block !important;
               flex: 0 0 100% !important;
+              max-width: 100% !important;
+              width: 100% !important;
+              padding-left: 0 !important;
+              padding-right: 0 !important;
+            }
+            .custom-login-page-root .custom-signin-card,
+            .custom-login-page-root [data-custom-block-root] .custom-signin-card {
+              max-width: 100% !important;
+              width: 100% !important;
+              margin: 0 auto !important;
+              padding: 22px 18px !important;
+              box-sizing: border-box !important;
+            }
+            .custom-login-page-root [data-custom-block-root] h1,
+            .custom-login-page-root [data-custom-block-root] .ant-typography h1 {
+              font-size: 26px !important;
+              line-height: 1.3 !important;
+            }
+            .custom-login-page-root [data-custom-block-root] p,
+            .custom-login-page-root [data-custom-block-root] .ant-typography {
+              font-size: 13.5px !important;
+            }
+            .custom-login-page-root [data-custom-block-root] .ant-row > .ant-col {
+              flex: 0 0 100% !important;
+              max-width: 100% !important;
+              width: 100% !important;
+              margin-bottom: 12px !important;
+            }
+            .custom-login-page-root [data-custom-block-root] .custom-notice-card {
+              padding: 8px 12px !important;
             }
             .custom-login-page-root [data-custom-block-root] {
               margin-bottom: 16px !important;
