@@ -183,46 +183,46 @@ export class PluginCustomLoginPageClientV2 extends Plugin {
     try {
       this.flowEngine?.registerModelLoaders?.({
         CustomLoginBlockModel: {
-          loader: () => import('./models/CustomBlocks').then((m) => m.CustomLoginBlockModel),
+          loader: () => import('./models/CustomLoginBlockModel').then((m) => m.CustomLoginBlockModel),
         },
         LoginPageBlockGridModel: {
           loader: () => import('./components/LoginPageBlockGridCanvas').then((m) => m.LoginPageBlockGridModel),
         },
         SignInFormBlockModel: {
-          loader: () => import('./models/CustomBlocks').then((m) => m.SignInFormBlockModel),
+          loader: () => import('./models/blocks/SignInFormBlock').then((m) => m.SignInFormBlockModel),
         },
         CustomHeroBlockModel: {
-          loader: () => import('./models/CustomBlocks').then((m) => m.CustomHeroBlockModel),
+          loader: () => import('./models/blocks/HeroBlock').then((m) => m.CustomHeroBlockModel),
         },
         CustomFeaturesBlockModel: {
-          loader: () => import('./models/CustomBlocks').then((m) => m.CustomFeaturesBlockModel),
+          loader: () => import('./models/blocks/FeaturesBlock').then((m) => m.CustomFeaturesBlockModel),
         },
         CustomCarouselBlockModel: {
-          loader: () => import('./models/CustomBlocks').then((m) => m.CustomCarouselBlockModel),
+          loader: () => import('./models/blocks/CarouselBlock').then((m) => m.CustomCarouselBlockModel),
         },
         CustomStatsBlockModel: {
-          loader: () => import('./models/CustomBlocks').then((m) => m.CustomStatsBlockModel),
+          loader: () => import('./models/blocks/StatsBlock').then((m) => m.CustomStatsBlockModel),
         },
         CustomHtmlBlockModel: {
-          loader: () => import('./models/CustomBlocks').then((m) => m.CustomHtmlBlockModel),
+          loader: () => import('./models/blocks/HtmlBlock').then((m) => m.CustomHtmlBlockModel),
         },
         CustomImageBlockModel: {
-          loader: () => import('./models/CustomBlocks').then((m) => m.CustomImageBlockModel),
+          loader: () => import('./models/blocks/ImageBlock').then((m) => m.CustomImageBlockModel),
         },
         CustomNoticeBlockModel: {
-          loader: () => import('./models/CustomBlocks').then((m) => m.CustomNoticeBlockModel),
+          loader: () => import('./models/blocks/NoticeBlock').then((m) => m.CustomNoticeBlockModel),
         },
         CustomPartnersBlockModel: {
-          loader: () => import('./models/CustomBlocks').then((m) => m.CustomPartnersBlockModel),
+          loader: () => import('./models/blocks/PartnersBlock').then((m) => m.CustomPartnersBlockModel),
         },
         CustomContactBlockModel: {
-          loader: () => import('./models/CustomBlocks').then((m) => m.CustomContactBlockModel),
+          loader: () => import('./models/blocks/ContactBlock').then((m) => m.CustomContactBlockModel),
         },
         CustomLanguageBlockModel: {
-          loader: () => import('./models/CustomBlocks').then((m) => m.CustomLanguageBlockModel),
+          loader: () => import('./models/blocks/LanguageBlock').then((m) => m.CustomLanguageBlockModel),
         },
         CustomCountdownBlockModel: {
-          loader: () => import('./models/CustomBlocks').then((m) => m.CustomCountdownBlockModel),
+          loader: () => import('./models/blocks/CountdownBlock').then((m) => m.CustomCountdownBlockModel),
         },
       });
     } catch (e) {
