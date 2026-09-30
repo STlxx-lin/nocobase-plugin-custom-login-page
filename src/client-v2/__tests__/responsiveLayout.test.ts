@@ -176,4 +176,30 @@ describe('Responsive Layout Engine (Container Queries & Viewport Mode)', () => {
     expect(card.querySelector('.custom-partners-logo-img.custom-partners-filter-white')).not.toBeNull();
     expect(card.querySelector('.custom-partners-logo-img.custom-partners-filter-black')).not.toBeNull();
   });
+
+  it('verifies ContactBlock item semantic classnames for high contrast text adaptation', () => {
+    const root = document.createElement('div');
+    root.className = 'custom-login-page-root custom-login-style-card is-white-mode';
+
+    const contact = document.createElement('div');
+    contact.className = 'custom-block-contact custom-contact-card custom-contact-theme-aurora';
+    contact.innerHTML = `
+      <div class="custom-contact-body">
+        <div class="custom-contact-list">
+          <div class="custom-contact-item">
+            <span class="custom-contact-item-label">售前热线</span>
+            <span class="custom-contact-item-value">400-666-8888</span>
+            <span class="custom-contact-item-action">拨打</span>
+          </div>
+        </div>
+      </div>
+    `;
+    root.appendChild(contact);
+    document.body.appendChild(root);
+
+    expect(root.querySelector('.custom-contact-item-value')).not.toBeNull();
+    expect(root.querySelector('.custom-contact-item-label')).not.toBeNull();
+    expect(root.querySelector('.custom-contact-item-action')).not.toBeNull();
+    expect(root.querySelector('.custom-contact-item-value')?.textContent).toBe('400-666-8888');
+  });
 });

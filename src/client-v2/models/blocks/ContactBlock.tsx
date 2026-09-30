@@ -211,28 +211,28 @@ export const ContactSupportInner: React.FC<{ model: any }> = ({ model }) => {
   const getActionBadge = (action: string) => {
     if (action === 'copy') {
       return (
-        <span style={{ fontSize: 11, opacity: 0.75, display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 'auto' }}>
+        <span className="custom-contact-item-action" style={{ fontSize: 11, opacity: 0.75, display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 'auto' }}>
           <CopyOutlined /> 复制
         </span>
       );
     }
     if (action === 'url') {
       return (
-        <span style={{ fontSize: 11, opacity: 0.75, display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 'auto' }}>
+        <span className="custom-contact-item-action" style={{ fontSize: 11, opacity: 0.75, display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 'auto' }}>
           <LinkOutlined /> 访问
         </span>
       );
     }
     if (action === 'tel') {
       return (
-        <span style={{ fontSize: 11, opacity: 0.75, display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 'auto' }}>
+        <span className="custom-contact-item-action" style={{ fontSize: 11, opacity: 0.75, display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 'auto' }}>
           <PhoneOutlined /> 拨打
         </span>
       );
     }
     if (action === 'mailto') {
       return (
-        <span style={{ fontSize: 11, opacity: 0.75, display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 'auto' }}>
+        <span className="custom-contact-item-action" style={{ fontSize: 11, opacity: 0.75, display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 'auto' }}>
           <MailOutlined /> 发信
         </span>
       );
@@ -242,7 +242,7 @@ export const ContactSupportInner: React.FC<{ model: any }> = ({ model }) => {
 
   return (
     <div
-      className="custom-block-contact custom-contact-card"
+      className={`custom-block-contact custom-contact-card custom-contact-theme-${themeKey}`}
       style={{
         background: theme.cardBg,
         borderRadius,
@@ -467,11 +467,15 @@ export const ContactSupportInner: React.FC<{ model: any }> = ({ model }) => {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
                   {item.label && (
-                    <span style={{ fontSize: 11, color: theme.subtitleColor, lineHeight: 1.2 }}>
+                    <span
+                      className="custom-contact-item-label"
+                      style={{ fontSize: 11, color: theme.subtitleColor, lineHeight: 1.2 }}
+                    >
                       {item.label}
                     </span>
                   )}
                   <span
+                    className="custom-contact-item-value"
                     style={{
                       fontSize: 13.5,
                       fontWeight: 600,

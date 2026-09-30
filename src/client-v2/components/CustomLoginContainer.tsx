@@ -708,6 +708,13 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
           .custom-login-page-root.is-white-mode .custom-countdown-number-label {
             color: #64748b !important;
           }
+          .custom-login-style-card .custom-countdown-number-box,
+          .custom-login-page-root.is-white-mode .custom-countdown-number-box {
+            background: #f1f5f9 !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #0f172a !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05) !important;
+          }
 
           /* === 白曜大卡片下客服支持 (ContactBlock) 质感微嵌 === */
           .custom-login-style-card .custom-contact-card h3,
@@ -722,7 +729,30 @@ const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, Custom
           .custom-login-page-root.is-white-mode .custom-contact-item {
             background: #f8fafc !important;
             border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03) !important;
+          }
+          .custom-login-style-card .custom-contact-item:hover,
+          .custom-login-page-root.is-white-mode .custom-contact-item:hover {
+            background: #f1f5f9 !important;
+            border-color: #cbd5e1 !important;
+          }
+          /* 核心：彻底解决 ContactBlock 白底白字，强制数值、标签与操作提示为高反差深色 */
+          .custom-login-style-card .custom-contact-item .custom-contact-item-value,
+          .custom-login-page-root.is-white-mode .custom-contact-item .custom-contact-item-value,
+          .custom-login-style-card .custom-contact-item span[style*="break-all"],
+          .custom-login-page-root.is-white-mode .custom-contact-item span[style*="break-all"] {
+            color: #0f172a !important;
+            text-shadow: none !important;
+          }
+          .custom-login-style-card .custom-contact-item .custom-contact-item-label,
+          .custom-login-page-root.is-white-mode .custom-contact-item .custom-contact-item-label {
+            color: #475569 !important;
+            text-shadow: none !important;
+          }
+          .custom-login-style-card .custom-contact-item .custom-contact-item-action,
+          .custom-login-page-root.is-white-mode .custom-contact-item .custom-contact-item-action {
             color: #334155 !important;
+            opacity: 0.9 !important;
           }
 
           /* === 黑曜科技大卡片 (custom-login-style-dark-card) 内部深邃太空与未来科技质感 === */
