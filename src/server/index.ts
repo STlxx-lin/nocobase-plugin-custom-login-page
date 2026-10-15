@@ -3,6 +3,7 @@ import { DataTypes } from '@nocobase/database';
 import path from 'path';
 import { triggerWorkflowAction } from './actions/trigger-workflow';
 import { getCaptchaAction } from './actions/captcha';
+import customLoginConfigsCollection from './collections/custom-login-configs';
 
 const DEFAULT_PRESET_GRID_SCHEMA = {
   use: 'LoginPageBlockGridModel',
@@ -239,6 +240,46 @@ export class PluginCustomLoginPageServer extends Plugin {
   private lastCacheTime = 0;
   private readonly CACHE_TTL_MS = 60000;
 
+  private getAppLogger() {
+    return (this.app as any)?.logger || (this.app as any)?.log;
+  }
+
+  private logError(message: string, err?: any) {
+    const logger = this.getAppLogger();
+    const detail = err ? (err.stack || err.message || String(err)) : '';
+    const fullMsg = detail ? `[CustomLoginPage] ${message}: ${detail}` : `[CustomLoginPage] ${message}`;
+    if (logger?.error) {
+      logger.error(fullMsg);
+    } else if (logger?.warn) {
+      logger.warn(fullMsg);
+    } else {
+      console.error(fullMsg);
+    }
+  }
+
+  private logWarn(message: string, err?: any) {
+    const logger = this.getAppLogger();
+    const detail = err ? (err.message || String(err)) : '';
+    const fullMsg = detail ? `[CustomLoginPage] ${message}: ${detail}` : `[CustomLoginPage] ${message}`;
+    if (logger?.warn) {
+      logger.warn(fullMsg);
+    } else if (logger?.info) {
+      logger.info(fullMsg);
+    } else {
+      console.warn(fullMsg);
+    }
+  }
+
+  private logInfo(message: string) {
+    const logger = this.getAppLogger();
+    const fullMsg = `[CustomLoginPage] ${message}`;
+    if (logger?.info) {
+      logger.info(fullMsg);
+    } else {
+      console.info(fullMsg);
+    }
+  }
+
   /**
    * 优先从分布式缓存（Redis/app.cache）读取，未命中则读取本地内存缓存
    */
@@ -250,7 +291,7 @@ export class PluginCustomLoginPageServer extends Plugin {
           return cached;
         }
       } catch (err: any) {
-        this.app.logger?.warn?.(`[CustomLoginPage] Distributed cache read failed, fallback to memory: ${err.message}`);
+        this.logWarn('Distributed cache read failed, fallback to memory', err);
       }
     }
     const now = Date.now();
@@ -271,7 +312,7 @@ export class PluginCustomLoginPageServer extends Plugin {
       try {
         await (this.app as any).cache.set(PUBLIC_CONFIG_CACHE_KEY, config, this.CACHE_TTL_MS);
       } catch (err: any) {
-        this.app.logger?.warn?.(`[CustomLoginPage] Distributed cache write failed: ${err.message}`);
+        this.logWarn('Distributed cache write failed', err);
       }
     }
   }
@@ -287,7 +328,7 @@ export class PluginCustomLoginPageServer extends Plugin {
       try {
         await (this.app as any).cache.del(PUBLIC_CONFIG_CACHE_KEY);
       } catch (err: any) {
-        this.app.logger?.warn?.(`[CustomLoginPage] Distributed cache del failed: ${err.message}`);
+        this.logWarn('Distributed cache del failed', err);
       }
     }
   }
@@ -295,14 +336,17 @@ export class PluginCustomLoginPageServer extends Plugin {
   async afterAdd() {}
 
   async beforeLoad() {
-    this.db.import({
-      directory: path.resolve(__dirname, 'collections'),
-    });
+    if (typeof this.db?.import === 'function') {
+      await this.db.import({
+        directory: path.resolve(__dirname, 'collections'),
+      });
+    }
   }
 
   async install() {
     // 首次激活插件时初始化默认配置种子记录，彻底避免在运行时读接口中产生写竞争
     try {
+      await this.autoHealSchema();
       const repo = this.getRepo();
       if (repo) {
         const existing = await repo.findOne({ filter: { key: 'default' } });
@@ -311,12 +355,24 @@ export class PluginCustomLoginPageServer extends Plugin {
         }
       }
     } catch (err: any) {
-      this.app.logger?.warn?.(`[CustomLoginPage] Failed to seed default configuration: ${err.message}`);
+      this.logWarn('Failed to seed default configuration', err);
     }
   }
 
   getRepo() {
-    return this.db.getRepository('custom_login_configs');
+    let repo = this.db?.getRepository?.('custom_login_configs') || (this.db?.getCollection?.('custom_login_configs') as any)?.repository;
+    if (!repo && this.db) {
+      try {
+        let createdCol: any = null;
+        if (typeof this.db.collection === 'function') {
+          createdCol = this.db.collection(customLoginConfigsCollection);
+        }
+        repo = (createdCol as any)?.repository || this.db.getRepository?.('custom_login_configs') || (this.db.getCollection?.('custom_login_configs') as any)?.repository;
+      } catch (err: any) {
+        this.logWarn('Defensive registration of custom_login_configs collection encountered error', err);
+      }
+    }
+    return repo || null;
   }
 
   /**
@@ -333,7 +389,14 @@ export class PluginCustomLoginPageServer extends Plugin {
         const name = typeof t === 'string' ? t : t?.tableName;
         return name === tableName || name?.toLowerCase() === tableName.toLowerCase();
       });
-      if (!tableExists) return;
+      if (!tableExists) {
+        const col = this.db?.getCollection?.('custom_login_configs');
+        if (typeof col?.sync === 'function') {
+          this.logInfo(`Table ${tableName} does not exist in DB, auto-syncing collection to create table`);
+          await col.sync();
+        }
+        return;
+      }
 
       const description = await queryInterface.describeTable(tableName);
       const columnsToAdd = [
@@ -346,7 +409,7 @@ export class PluginCustomLoginPageServer extends Plugin {
 
       for (const col of columnsToAdd) {
         if (!description[col.name]) {
-          this.app.logger?.info?.(`[CustomLoginPage] Auto-healing schema: adding missing column ${col.name} to ${tableName}`);
+          this.logInfo(`Auto-healing schema: adding missing column ${col.name} to ${tableName}`);
           await queryInterface.addColumn(tableName, col.name, {
             type: col.type,
             ...col.options,
@@ -354,7 +417,7 @@ export class PluginCustomLoginPageServer extends Plugin {
         }
       }
     } catch (err: any) {
-      this.app.logger?.warn?.(`[CustomLoginPage] Auto-healing schema check skipped/failed: ${err.message}`);
+      this.logWarn('Auto-healing schema check skipped/failed', err);
     }
   }
 
@@ -383,7 +446,7 @@ export class PluginCustomLoginPageServer extends Plugin {
               record = await repo.findOne({ filter: { key: 'default' } });
             }
           } catch (err: any) {
-            this.app.logger?.warn?.(`[CustomLoginPage] Failed to read public config: ${err.message}`);
+            this.logWarn('Failed to read public config', err);
             // Never replace a working page with defaults during a database outage.
             ctx.body = this.cachedPublicConfig || { enabled: false };
             await next();
@@ -421,11 +484,34 @@ export class PluginCustomLoginPageServer extends Plugin {
             if (!repo) throw new Error('Configuration repository is unavailable');
             record = await repo.findOne({ filter: { key: 'default' } });
           } catch (err: any) {
-            this.app.logger?.error?.(`[CustomLoginPage] Failed to read config: ${err.message}`);
-            ctx.throw(503, 'Configuration could not be loaded. Please retry.');
+            this.logError('Failed to read config', err);
+            // 降级策略：检测是否由于表尚未创建（空白数据库/未执行迁移），若是则尝试自愈建表
+            const errMsg = String(err?.message || err);
+            const isTableMissing =
+              errMsg.includes('no such table') ||
+              errMsg.includes("doesn't exist") ||
+              errMsg.includes('does not exist') ||
+              errMsg.includes('relation');
+            if (isTableMissing) {
+              try {
+                const col = this.db?.getCollection?.('custom_login_configs');
+                if (typeof col?.sync === 'function') {
+                  this.logInfo('Table missing on getConfig, auto-syncing collection table...');
+                  await col.sync();
+                  const repo = this.getRepo();
+                  record = await repo?.findOne?.({ filter: { key: 'default' } });
+                }
+              } catch (syncErr: any) {
+                this.logWarn('Auto-sync table on missing table error failed', syncErr);
+              }
+            }
+            // 若数据库发生真实故障（如网络断开/离线），必须安全抛出 503 阻止前端覆盖已有页面
+            if (!record && !isTableMissing) {
+              ctx.throw(503, 'Configuration could not be loaded. Please retry.');
+            }
           }
 
-          const rawRecord = (record?.toJSON ? record.toJSON() : record) || DEFAULT_CONFIG_VALUES;
+          const rawRecord = (record?.toJSON ? record.toJSON() : record) || this.cachedPublicConfig || DEFAULT_CONFIG_VALUES;
 
           ctx.body = {
             ...rawRecord,
@@ -443,26 +529,70 @@ export class PluginCustomLoginPageServer extends Plugin {
         },
 
         saveConfig: async (ctx, next) => {
-          const rawValues = ctx.action?.params?.values || ctx.request?.body || {};
+          const getValidObject = (obj: any) =>
+            obj && typeof obj === 'object' && !Array.isArray(obj) && Object.keys(obj).length > 0 ? obj : null;
+
+          const rawValues =
+            getValidObject(ctx.action?.params?.values) ||
+            getValidObject(ctx.request?.body?.values) ||
+            getValidObject(ctx.request?.body) ||
+            getValidObject(ctx.action?.params) ||
+            ctx.action?.params?.values ||
+            ctx.request?.body?.values ||
+            ctx.request?.body ||
+            {};
           const values = sanitizeConfigValues(rawValues);
           let record: any = null;
 
           try {
             const repo = this.getRepo();
             if (!repo) throw new Error('Configuration repository is unavailable');
-            record = await this.db.sequelize.transaction(async (transaction) => {
-              const existing = await repo.findOne({ filter: { key: 'default' }, transaction });
-              if (!existing) {
-                return repo.create({ values: { ...DEFAULT_CONFIG_VALUES, ...values, key: 'default' }, transaction });
+            const executeSave = async (transaction?: any) => {
+              const findOptions = transaction ? { filter: { key: 'default' }, transaction } : { filter: { key: 'default' } };
+              let existing: any = null;
+              try {
+                existing = await repo.findOne(findOptions);
+              } catch (findErr: any) {
+                const errMsg = String(findErr?.message || findErr);
+                if (
+                  errMsg.includes('no such table') ||
+                  errMsg.includes("doesn't exist") ||
+                  errMsg.includes('does not exist') ||
+                  errMsg.includes('relation')
+                ) {
+                  const col = this.db?.getCollection?.('custom_login_configs');
+                  if (typeof col?.sync === 'function') {
+                    await col.sync();
+                    existing = await repo.findOne(findOptions);
+                  }
+                } else {
+                  throw findErr;
+                }
               }
-              await repo.update({ filter: { key: 'default' }, values, transaction });
-              const saved = await repo.findOne({ filter: { key: 'default' }, transaction });
+              if (!existing) {
+                return repo.create({
+                  values: { ...DEFAULT_CONFIG_VALUES, ...values, key: 'default' },
+                  ...(transaction ? { transaction } : {}),
+                });
+              }
+              await repo.update({
+                filter: { key: 'default' },
+                values,
+                ...(transaction ? { transaction } : {}),
+              });
+              const saved = await repo.findOne(findOptions);
               if (!saved) throw new Error('Saved configuration could not be read back');
               return saved;
-            });
+            };
+
+            if (typeof this.db?.sequelize?.transaction === 'function') {
+              record = await this.db.sequelize.transaction(executeSave);
+            } else {
+              record = await executeSave();
+            }
             if (!record) throw new Error('Configuration was not saved');
           } catch (err: any) {
-            this.app.logger?.error?.(`[CustomLoginPage] Failed to save config: ${err.message}`);
+            this.logError('Failed to save config', err);
             ctx.throw(503, 'Configuration could not be saved. Please retry.');
           }
 

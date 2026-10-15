@@ -226,6 +226,304 @@ describe('configuration persistence and last good cache', () => {
       expect(addColumn).toHaveBeenCalledWith('custom_login_configs', 'mobileContainerStyle', expect.any(Object));
     });
   });
+
+  describe('lifecycle initialization & defensive repository registration', () => {
+    it('awaits db.import during beforeLoad and getConfig immediately returns default config without 503', async () => {
+      let importResolved = false;
+      const testRepo = {
+        findOne: vi.fn().mockImplementation(async () => {
+          if (!importResolved) {
+            throw new Error('Collection was not imported yet');
+          }
+          return null; // Initial empty state before seeding
+        }),
+      };
+
+      const freshPlugin = new PluginCustomLoginPageServer();
+      let capturedActions: any = null;
+
+      Object.assign(freshPlugin, {
+        db: {
+          import: vi.fn(async () => {
+            await new Promise((r) => setTimeout(r, 20));
+            importResolved = true;
+          }),
+          getRepository: () => (importResolved ? testRepo : null),
+          sequelize: {
+            transaction: vi.fn(async (cb) => cb({})),
+            getQueryInterface: () => ({
+              showAllTables: vi.fn().mockResolvedValue([]),
+            }),
+          },
+        },
+        app: {
+          resource: (resource: any) => { capturedActions = resource.actions; },
+          acl: { allow: vi.fn(), registerSnippet: vi.fn() },
+          logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+        },
+      });
+
+      // beforeLoad must await import
+      await freshPlugin.beforeLoad();
+      expect(importResolved).toBe(true);
+
+      await freshPlugin.load();
+
+      const ctx = context();
+      const next = vi.fn();
+      await capturedActions.getConfig(ctx, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(ctx.body).toMatchObject({
+        canvasWidth: 'wide',
+        containerStyle: 'transparent',
+      });
+      expect(ctx.body.enabled).toBe(true);
+    });
+
+    it('defensively registers collection if getRepository initially returns null', async () => {
+      const defensiveRepo = {
+        findOne: vi.fn().mockResolvedValue(null),
+      };
+
+      let registered = false;
+      const freshPlugin = new PluginCustomLoginPageServer();
+      let capturedActions: any = null;
+
+      Object.assign(freshPlugin, {
+        db: {
+          import: vi.fn().mockResolvedValue(undefined),
+          hasCollection: vi.fn(() => registered),
+          collection: vi.fn((col) => {
+            expect(col.name).toBe('custom_login_configs');
+            registered = true;
+          }),
+          getRepository: (name: string) => (registered && name === 'custom_login_configs' ? defensiveRepo : null),
+          sequelize: {
+            transaction: vi.fn(async (cb) => cb({})),
+            getQueryInterface: () => ({
+              showAllTables: vi.fn().mockResolvedValue([]),
+            }),
+          },
+        },
+        app: {
+          log: { error: vi.fn(), warn: vi.fn(), info: vi.fn() }, // test app.log compatibility
+          resource: (resource: any) => { capturedActions = resource.actions; },
+          acl: { allow: vi.fn(), registerSnippet: vi.fn() },
+        },
+      });
+
+      await freshPlugin.load();
+
+      // getRepo should notice null, call collection(), and recover repo
+      const repo = freshPlugin.getRepo();
+      expect(repo).toBe(defensiveRepo);
+      expect(freshPlugin.db.collection).toHaveBeenCalled();
+
+      const ctx = context();
+      await capturedActions.getConfig(ctx, vi.fn());
+      expect(ctx.body.enabled).toBe(true);
+    });
+
+    it('recovers repository even if hasCollection is already true but repository is initially null', async () => {
+      const defensiveRepo = {
+        findOne: vi.fn().mockResolvedValue(null),
+      };
+
+      let registered = false;
+      const freshPlugin = new PluginCustomLoginPageServer();
+      Object.assign(freshPlugin, {
+        db: {
+          hasCollection: vi.fn(() => true), // Collection supposedly exists
+          collection: vi.fn((col) => {
+            registered = true;
+          }),
+          getRepository: (name: string) => (registered ? defensiveRepo : null),
+        },
+        app: {
+          log: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+        },
+      });
+
+      const repo = freshPlugin.getRepo();
+      expect(repo).toBe(defensiveRepo);
+      expect(freshPlugin.db.collection).toHaveBeenCalled();
+    });
+
+    it('safely performs saveConfig when sequelize.transaction is unavailable', async () => {
+      const savedConfig = { key: 'default', enabled: true, canvasWidth: 'wide' };
+      const nonTxRepo = {
+        findOne: vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(savedConfig),
+        create: vi.fn().mockResolvedValue(savedConfig),
+        update: vi.fn().mockResolvedValue(undefined),
+      };
+
+      const freshPlugin = new PluginCustomLoginPageServer();
+      let capturedActions: any = null;
+
+      Object.assign(freshPlugin, {
+        db: {
+          getRepository: () => nonTxRepo,
+          sequelize: null, // No sequelize / no transaction method
+        },
+        app: {
+          resource: (resource: any) => { capturedActions = resource.actions; },
+          acl: { allow: vi.fn(), registerSnippet: vi.fn() },
+          log: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+        },
+      });
+
+      await freshPlugin.load();
+
+      const ctx = context({ enabled: true });
+      const next = vi.fn();
+      await capturedActions.saveConfig(ctx, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(nonTxRepo.create).toHaveBeenCalled();
+      expect(ctx.body).toMatchObject({ enabled: true, canvasWidth: 'wide' });
+    });
+
+    it('captures createdCol.repository immediately when db.collection returns the instance', async () => {
+      const defensiveRepo = { findOne: vi.fn().mockResolvedValue(null) };
+      const freshPlugin = new PluginCustomLoginPageServer();
+      Object.assign(freshPlugin, {
+        db: {
+          collection: vi.fn(() => ({ name: 'custom_login_configs', repository: defensiveRepo })),
+          getRepository: vi.fn(() => null), // simulate delay in getRepository index update
+        },
+        app: { log: { warn: vi.fn() } },
+      });
+
+      const repo = freshPlugin.getRepo();
+      expect(repo).toBe(defensiveRepo);
+      expect(freshPlugin.db.collection).toHaveBeenCalled();
+    });
+
+    it('prefers request body when action.params.values is empty object in saveConfig', async () => {
+      const savedConfig = { key: 'default', enabled: false, canvasWidth: 'wide' };
+      const mockRepo = {
+        findOne: vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(savedConfig),
+        create: vi.fn().mockResolvedValue(savedConfig),
+        update: vi.fn().mockResolvedValue(undefined),
+      };
+
+      const freshPlugin = new PluginCustomLoginPageServer();
+      let capturedActions: any = null;
+      Object.assign(freshPlugin, {
+        db: { getRepository: () => mockRepo, sequelize: null },
+        app: {
+          resource: (res: any) => { capturedActions = res.actions; },
+          acl: { allow: vi.fn(), registerSnippet: vi.fn() },
+          log: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+        },
+      });
+      await freshPlugin.load();
+
+      const ctx: any = {
+        action: { params: { values: {} } }, // empty object
+        request: { body: { enabled: false } }, // real payload in body
+        body: undefined,
+        throw: vi.fn(),
+      };
+      const next = vi.fn();
+      await capturedActions.saveConfig(ctx, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(mockRepo.create).toHaveBeenCalledWith(expect.objectContaining({
+        values: expect.objectContaining({ enabled: false }),
+      }));
+    });
+
+    it('recovers with auto-sync and default values when getConfig encounters table missing error on blank database', async () => {
+      const mockCol = {
+        sync: vi.fn().mockResolvedValue(undefined),
+      };
+      const mockRepo = {
+        findOne: vi.fn()
+          .mockRejectedValueOnce(new Error('SQLITE_ERROR: no such table: custom_login_configs'))
+          .mockResolvedValueOnce(null),
+      };
+
+      const freshPlugin = new PluginCustomLoginPageServer();
+      let capturedActions: any = null;
+      Object.assign(freshPlugin, {
+        db: {
+          getRepository: () => mockRepo,
+          getCollection: () => mockCol,
+        },
+        app: {
+          resource: (res: any) => { capturedActions = res.actions; },
+          acl: { allow: vi.fn(), registerSnippet: vi.fn() },
+          log: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+        },
+      });
+      await freshPlugin.load();
+
+      const ctx: any = {
+        action: { params: {} },
+        request: {},
+        body: undefined,
+        throw: vi.fn(),
+      };
+      const next = vi.fn();
+      await capturedActions.getConfig(ctx, next);
+
+      expect(mockCol.sync).toHaveBeenCalled();
+      expect(next).toHaveBeenCalled();
+      expect(ctx.throw).not.toHaveBeenCalled();
+      expect(ctx.body).toMatchObject({
+        enabled: true,
+        template: 'split',
+        canvasWidth: 'wide',
+      });
+    });
+
+    it('auto-syncs table and succeeds when saveConfig encounters missing table error', async () => {
+      const savedConfig = { key: 'default', enabled: true, canvasWidth: 'wide' };
+      const mockCol = {
+        sync: vi.fn().mockResolvedValue(undefined),
+      };
+      const mockRepo = {
+        findOne: vi.fn()
+          .mockRejectedValueOnce(new Error('Table custom_login_configs does not exist'))
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce(savedConfig),
+        create: vi.fn().mockResolvedValue(savedConfig),
+        update: vi.fn().mockResolvedValue(undefined),
+      };
+
+      const freshPlugin = new PluginCustomLoginPageServer();
+      let capturedActions: any = null;
+      Object.assign(freshPlugin, {
+        db: {
+          getRepository: () => mockRepo,
+          getCollection: () => mockCol,
+          sequelize: null,
+        },
+        app: {
+          resource: (res: any) => { capturedActions = res.actions; },
+          acl: { allow: vi.fn(), registerSnippet: vi.fn() },
+          log: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+        },
+      });
+      await freshPlugin.load();
+
+      const ctx: any = {
+        action: { params: { values: { enabled: true } } },
+        request: {},
+        body: undefined,
+        throw: vi.fn(),
+      };
+      const next = vi.fn();
+      await capturedActions.saveConfig(ctx, next);
+
+      expect(mockCol.sync).toHaveBeenCalled();
+      expect(next).toHaveBeenCalled();
+      expect(ctx.throw).not.toHaveBeenCalled();
+      expect(mockRepo.create).toHaveBeenCalled();
+    });
+  });
 });
 
 

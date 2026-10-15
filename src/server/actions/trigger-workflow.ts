@@ -74,10 +74,19 @@ export async function triggerWorkflowAction(ctx: Context, next: () => Promise<an
   const now = Date.now();
 
   const db = ctx.db;
-  const configRepo = db.getRepository('custom_login_configs');
-  const config = (await configRepo.findOne({
-    filter: { key: 'default' },
-  })) || { allowedWorkflowKeys: [], rateLimitPerMinute: 15 };
+  const configRepo = db?.getRepository?.('custom_login_configs') || (db?.getCollection?.('custom_login_configs') as any)?.repository;
+  let configRecord: any = null;
+  if (configRepo?.findOne) {
+    try {
+      configRecord = await configRepo.findOne({
+        filter: { key: 'default' },
+      });
+    } catch (e) {
+      // 容错降级
+    }
+  }
+  const rawConfig = (configRecord?.toJSON ? configRecord.toJSON() : configRecord);
+  const config = rawConfig || { allowedWorkflowKeys: [], rateLimitPerMinute: 15 };
 
   const limit = Number(config.rateLimitPerMinute) || 15;
 

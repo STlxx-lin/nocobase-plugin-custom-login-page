@@ -72,6 +72,15 @@ describe('public workflow acceptance', () => {
     expect(triggeredData.nested.prototype).toBeUndefined();
     expect(Object.prototype.hasOwnProperty.call(triggeredData, '__proto__')).toBe(false);
   });
+
+  it('safely falls back to default config if custom_login_configs repository is unavailable', async () => {
+    const { ctx, workflows } = setup();
+    ctx.db = {
+      getRepository: (name: string) => (name === 'workflows' ? workflows : null),
+    };
+    // Default config has empty allowedWorkflowKeys, so it rejects with 403 rather than throwing TypeError
+    await expect(triggerWorkflowAction(ctx, vi.fn())).rejects.toMatchObject({ status: 403 });
+  });
 });
 
 describe('captcha generator and verifier', () => {

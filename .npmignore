@@ -3,6 +3,11 @@
 /scripts
 /storage
 /release
+/docs
 *.tgz
 *.zip
+*.cjs
 .github
+vitest.config.ts
+build.config.ts
+tsconfig.json

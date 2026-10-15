@@ -19,7 +19,8 @@ export default class extends Migration {
         });
       }
     } catch (err: any) {
-      this.app.logger?.warn?.(`[CustomLoginPage Migration] init-custom-login-configs skipped: ${err.message}`);
+      const logger = (this.app as any)?.logger || (this.app as any)?.log;
+      logger?.warn?.(`[CustomLoginPage Migration] init-custom-login-configs skipped: ${err.message}`);
     }
   }
 }

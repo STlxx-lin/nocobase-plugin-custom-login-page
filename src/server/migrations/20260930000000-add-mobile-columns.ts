@@ -6,7 +6,8 @@ export default class extends Migration {
 
   async up() {
     try {
-      const queryInterface = this.app.db.sequelize.getQueryInterface();
+      const queryInterface = this.app?.db?.sequelize?.getQueryInterface?.();
+      if (!queryInterface) return;
       const tableName = 'custom_login_configs';
       const tables = await queryInterface.showAllTables();
       const tableExists = tables.some((t: string | { tableName?: string }) => {
@@ -24,9 +25,10 @@ export default class extends Migration {
         { name: 'mobileContainerStyle', type: DataTypes.STRING(255), options: { defaultValue: 'transparent' } },
       ];
 
+      const logger = (this.app as any)?.logger || (this.app as any)?.log;
       for (const col of columnsToAdd) {
         if (!description[col.name]) {
-          this.app.logger?.info?.(`[CustomLoginPage Migration] Adding column ${col.name} to ${tableName}`);
+          logger?.info?.(`[CustomLoginPage Migration] Adding column ${col.name} to ${tableName}`);
           await queryInterface.addColumn(tableName, col.name, {
             type: col.type,
             ...col.options,
@@ -34,7 +36,8 @@ export default class extends Migration {
         }
       }
     } catch (err: any) {
-      this.app.logger?.warn?.(`[CustomLoginPage Migration] add-mobile-columns skipped: ${err.message}`);
+      const logger = (this.app as any)?.logger || (this.app as any)?.log;
+      logger?.warn?.(`[CustomLoginPage Migration] add-mobile-columns skipped: ${err.message}`);
     }
   }
 }
