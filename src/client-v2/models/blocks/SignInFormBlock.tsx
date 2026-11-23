@@ -71,9 +71,33 @@ export const SIGNIN_THEMES: Record<string, {
   },
 };
 
+// 🛡️ 官方原生登录组件渲染安全边界：彻底捕获任何第三方认证插件/React Router 上下文抛出的空指针异常（如 reading state）
+class NativeSignInSafeWrapper extends React.Component<{
+  fallback: React.ReactNode;
+  children: React.ReactNode;
+}, { hasError: boolean }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(err: any) {
+    console.warn('[SignInFormBlock] 捕获到系统原生登录组件未捕获异常，已无缝切换至高可用安全表单模式:', err);
+  }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
 export const NativeSignInRenderer: React.FC<{ model: any; theme?: any }> = ({ model, theme }) => {
   const isDesignMode = (window as any).__customLoginDesignMode;
   const OriginalSignIn = (window as any).__NocobaseOriginalSignInComponent;
+  const routeProps = (window as any).__nocobase_signin_route_props__ || {};
   const props = model?.props || {};
   const buttonColor = props.buttonColor || '#1677ff';
   const loginButtonText = props.loginButtonText || '登录';
@@ -97,7 +121,21 @@ export const NativeSignInRenderer: React.FC<{ model: any; theme?: any }> = ({ mo
         }}
       >
         <div className="nocobase-native-signin-embed" style={{ width: '100%' }}>
-          <OriginalSignIn />
+          <NativeSignInSafeWrapper
+            fallback={
+              <FallbackSignInForm
+                buttonColor={buttonColor}
+                loginButtonText={loginButtonText}
+                isDark={isDark}
+                props={props}
+                theme={theme}
+                showAgreement={showAgreement}
+                agreementText={agreementText}
+              />
+            }
+          >
+            <OriginalSignIn {...routeProps} />
+          </NativeSignInSafeWrapper>
           {showAgreement && agreementText && (
             <div
               style={{
@@ -116,7 +154,29 @@ export const NativeSignInRenderer: React.FC<{ model: any; theme?: any }> = ({ mo
     );
   }
 
-  // 2. 后台设计预览态：动态读取系统真实用户认证插件状态（拒绝假数据/假开关）
+  return (
+    <FallbackSignInForm
+      buttonColor={buttonColor}
+      loginButtonText={loginButtonText}
+      isDark={isDark}
+      props={props}
+      theme={theme}
+      showAgreement={showAgreement}
+      agreementText={agreementText}
+    />
+  );
+};
+
+const FallbackSignInForm: React.FC<{
+  buttonColor: string;
+  loginButtonText: string;
+  isDark: boolean;
+  props: any;
+  theme: any;
+  showAgreement: boolean;
+  agreementText: string;
+}> = ({ buttonColor, loginButtonText, isDark, props, theme, showAgreement, agreementText }) => {
+  // 后台设计预览态或前台降级兜底：动态读取系统真实用户认证插件状态（拒绝假数据/假开关）
   const [authStatus, setAuthStatus] = useState<{
     allowSignUp: boolean;
     enableResetPassword: boolean;

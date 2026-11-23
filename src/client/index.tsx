@@ -59,12 +59,32 @@ const CustomAuthLayout: React.FC = () => {
     let mounted = true;
     const fetchConfigAndSystem = async () => {
       try {
-        const res = await apiClient.request({
-          url: 'customLoginPage:getPublicConfig',
-          skipAuth: true,
-          skipNotify: true,
-        });
-        const data = res?.data?.data || res?.data;
+        let data: any = null;
+        // 1. 优先使用原生 fetch 隔离 Axios 拦截器，防范 router.state 空指针
+        try {
+          const publicPath = (window as any)?.__nocobase_public_path__ || '';
+          const prefix = publicPath ? (publicPath.endsWith('/') ? publicPath.slice(0, -1) : publicPath) : '';
+          const resp = await fetch(`${prefix}/api/customLoginPage:getPublicConfig`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          });
+          if (resp.ok) {
+            const json = await resp.json();
+            data = json?.data || json;
+          }
+        } catch (fetchErr) {}
+
+        // 2. 备用安全 apiClient 请求
+        if (!data && apiClient) {
+          try {
+            const res = await apiClient.request({
+              url: 'customLoginPage:getPublicConfig',
+              skipAuth: true,
+              skipNotify: true,
+            });
+            data = res?.data?.data || res?.data;
+          } catch (apiErr) {}
+        }
+
         if (mounted && data) {
           try {
             localStorage.setItem('nocobase_custom_login_public_config_v2', JSON.stringify(data));
@@ -97,9 +117,9 @@ const CustomAuthLayout: React.FC = () => {
     };
   }, [apiClient]);
 
-  const NativeSignIn = () => (
+  const NativeSignIn = (props: any) => (
     <AuthenticatorsContextProvider>
-      <Outlet />
+      <Outlet {...props} />
     </AuthenticatorsContextProvider>
   );
 
@@ -164,6 +184,7 @@ const CustomAuthLayout: React.FC = () => {
       activeTarget={isMobileTarget ? 'mobile' : 'desktop'}
       originalSignInPage={NativeSignIn}
       apiClient={apiClient}
+      routeProps={{}}
     />
   );
 };

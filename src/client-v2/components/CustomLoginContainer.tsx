@@ -14,7 +14,8 @@ export interface CustomLoginContainerProps {
   viewportMode?: 'desktop' | 'tablet' | 'mobile';
   activeTarget?: 'desktop' | 'mobile';
   onModelReady?: (model: any) => void;
-  originalSignInPage?: React.ComponentType;
+  originalSignInPage?: React.ComponentType<any>;
+  routeProps?: any;
 }
 
 // 🛡️ 官方 PoweredBy 渲染错误边界：应对极少数环境上下文缺失情况，永不中断，保障 100% 呈现官方品牌
@@ -129,7 +130,8 @@ export const SafePoweredBy: React.FC<{ isLightBg: boolean }> = ({ isLightBg }) =
 // 🛡️ 生产级错误边界保护：拦截任意自定义区块的未捕获崩溃，自动安全降级为官方原生登录，永不白屏！
 interface ErrorBoundaryProps {
   children: React.ReactNode;
-  fallbackComponent?: React.ComponentType;
+  fallbackComponent?: React.ComponentType<any>;
+  routeProps?: any;
 }
 
 interface ErrorBoundaryState {
@@ -160,7 +162,7 @@ export class CustomLoginErrorBoundary extends React.Component<ErrorBoundaryProps
             <div style={{ marginBottom: 16, padding: '8px 12px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 8, fontSize: 12, color: '#d48806' }}>
               ⚠️ 自定义登录画布渲染异常，已自动启用系统原生登录安全保障模式。
             </div>
-            {Fallback ? <Fallback /> : <div>请联系系统管理员修复自定义登录配置。</div>}
+            {Fallback ? <Fallback {...(this.props.routeProps || {})} /> : <div>请联系系统管理员修复自定义登录配置。</div>}
           </div>
           <div style={{ marginTop: 24, textAlign: 'center' }}>
             <SafePoweredBy isLightBg={false} />
@@ -177,18 +179,24 @@ export class CustomLoginErrorBoundary extends React.Component<ErrorBoundaryProps
  * 100% 承载官方原生 BlockGrid 画布，支持官方原生拖拽排版与区块设计
  */
 const CustomLoginContainerInner = forwardRef<LoginPageBlockGridCanvasRef, CustomLoginContainerProps>(
-  ({ config, designMode = false, onModelReady, originalSignInPage, viewportMode = 'desktop', activeTarget }, ref) => {
+  ({ config, designMode = false, onModelReady, originalSignInPage, viewportMode = 'desktop', activeTarget, routeProps }, ref) => {
     const { token } = theme.useToken();
 
-    // 挂载原生登录组件供区块模型使用
+    // 挂载原生登录组件供区块模型使用，并同步路由 props
     React.useEffect(() => {
       if (originalSignInPage) {
         (window as any).__NocobaseOriginalSignInComponent = originalSignInPage;
       }
-    }, [originalSignInPage]);
+      if (routeProps) {
+        (window as any).__nocobase_signin_route_props__ = routeProps;
+      }
+    }, [originalSignInPage, routeProps]);
 
     if (originalSignInPage) {
       (window as any).__NocobaseOriginalSignInComponent = originalSignInPage;
+    }
+    if (routeProps) {
+      (window as any).__nocobase_signin_route_props__ = routeProps;
     }
 
     const isMobileTarget =
@@ -918,7 +926,7 @@ CustomLoginContainerInner.displayName = 'CustomLoginContainerInner';
 export const CustomLoginContainer = forwardRef<LoginPageBlockGridCanvasRef, CustomLoginContainerProps>(
   (props, ref) => {
     return (
-      <CustomLoginErrorBoundary fallbackComponent={props.originalSignInPage}>
+      <CustomLoginErrorBoundary fallbackComponent={props.originalSignInPage} routeProps={props.routeProps}>
         <CustomLoginContainerInner {...props} ref={ref} />
       </CustomLoginErrorBoundary>
     );

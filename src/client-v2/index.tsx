@@ -20,14 +20,25 @@ const getInitialCachedConfig = (): { config: CustomLoginConfig | null; hasCached
 };
 
 // 登录页包装组件
-const EnhancedSignInPage: React.FC<{ originalSignInPage: React.ComponentType }> = ({
+interface EnhancedSignInPageProps {
+  originalSignInPage: React.ComponentType<any>;
+  [key: string]: any;
+}
+
+const EnhancedSignInPage: React.FC<EnhancedSignInPageProps> = ({
   originalSignInPage: OriginalSignInPage,
+  ...routeProps
 }) => {
   const t = useT();
   const app = useApp();
   const initialCache = React.useMemo(() => getInitialCachedConfig(), []);
   const [config, setConfig] = useState<CustomLoginConfig | null>(initialCache.config);
   const [loading, setLoading] = useState(!initialCache.hasCached);
+
+  // 同步路由 props 至全局环境，方便深层网格组件随时使用
+  if (typeof window !== 'undefined') {
+    (window as any).__nocobase_signin_route_props__ = routeProps;
+  }
 
   const safeParseJson = (val: any, fallback: any) => {
     if (!val) return fallback;
@@ -48,29 +59,29 @@ const EnhancedSignInPage: React.FC<{ originalSignInPage: React.ComponentType }> 
     const loadConfig = async () => {
       try {
         let data: any = null;
-        // 1. 优先使用 app.apiClient 官方标准请求客户端
+        // 1. 优先使用原生 fetch：天然隔离 Axios 拦截器，杜绝官方 plugin-auth 在未登录阶段访问 router.state 抛出空指针异常
         try {
-          if (app?.apiClient) {
+          const publicPath = (window as any)?.__nocobase_public_path__ || '';
+          const prefix = publicPath ? (publicPath.endsWith('/') ? publicPath.slice(0, -1) : publicPath) : '';
+          const resp = await fetch(`${prefix}/api/customLoginPage:getPublicConfig`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          });
+          if (resp.ok) {
+            const json = await resp.json();
+            data = json?.data || json;
+          }
+        } catch (fetchErr) {}
+
+        // 2. 备用安全 apiClient 请求（带严格错误捕获与静默）
+        if (!data && app?.apiClient) {
+          try {
             const res = await app.apiClient.request({
               url: 'customLoginPage:getPublicConfig',
               skipAuth: true,
               skipNotify: true,
             });
             data = res?.data?.data || res?.data;
-          }
-        } catch (apiErr) {}
-
-        // 2. 备用安全 fetch 请求（兼容极端代理环境）
-        if (!data) {
-          try {
-            const publicPath = (window as any)?.__nocobase_public_path__ || '';
-            const prefix = publicPath ? (publicPath.endsWith('/') ? publicPath.slice(0, -1) : publicPath) : '';
-            const resp = await fetch(`${prefix}/api/customLoginPage:getPublicConfig`);
-            if (resp.ok) {
-              const json = await resp.json();
-              data = json?.data || json;
-            }
-          } catch (fetchErr) {}
+          } catch (apiErr) {}
         }
 
         if (mounted && data) {
@@ -97,7 +108,7 @@ const EnhancedSignInPage: React.FC<{ originalSignInPage: React.ComponentType }> 
           setConfig(formattedConfig);
         }
       } catch (err) {
-        // 接口未就绪或未启用
+        // 接口未就绪或未启用时平滑静默
       } finally {
         if (mounted) setLoading(false);
       }
@@ -153,20 +164,22 @@ const EnhancedSignInPage: React.FC<{ originalSignInPage: React.ComponentType }> 
     );
   }
 
-  // 若未启用自定义，直接渲染原生
+  // 若未启用自定义，直接渲染原生，全量透传 routeProps
   if (!config || !config.enabled) {
-    return <OriginalSignInPage />;
+    return <OriginalSignInPage {...routeProps} />;
   }
 
   const isMobileTarget = isMobile && Boolean(config.enableMobileCustom);
 
   return (
     <CustomLoginContainer
+      {...routeProps}
       config={config}
       designMode={false}
       viewportMode={isMobile ? 'mobile' : 'desktop'}
       activeTarget={isMobileTarget ? 'mobile' : 'desktop'}
       originalSignInPage={OriginalSignInPage}
+      routeProps={routeProps}
     />
   );
 };
@@ -274,7 +287,7 @@ export class PluginCustomLoginPageClientV2 extends Plugin {
       }
     }
 
-    // 3. 增强 /signin 路由：无缝包裹原生 SignInPage
+    // 3. 增强 /signin 路由：无缝包裹原生 SignInPage 并全量透传 props
     try {
       const authRoute: any = this.router.get('auth.signin');
       if (authRoute) {
@@ -283,13 +296,18 @@ export class PluginCustomLoginPageClientV2 extends Plugin {
           authRoute.componentLoader = async () => {
             const originalModule = await rawLoader();
             const RawComponent = (originalModule && originalModule.default) || originalModule;
+            const EnhancedWrapper: React.FC<any> = (props) => (
+              <EnhancedSignInPage {...props} originalSignInPage={RawComponent} />
+            );
             return {
-              default: () => <EnhancedSignInPage originalSignInPage={RawComponent} />,
+              default: EnhancedWrapper,
             };
           };
         } else if (authRoute.Component) {
           const RawComponent = authRoute.Component;
-          authRoute.Component = () => <EnhancedSignInPage originalSignInPage={RawComponent} />;
+          authRoute.Component = (props: any) => (
+            <EnhancedSignInPage {...props} originalSignInPage={RawComponent} />
+          );
         }
       }
     } catch (e) {
