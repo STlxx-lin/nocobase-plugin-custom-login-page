@@ -135,6 +135,8 @@ yarn nocobase pm enable @nocobase/plugin-custom-login-page
 yarn nocobase upgrade
 ```
 
+> **数据库兼容性说明**：本插件表结构同步完全遵循 NocoBase ORM 字段映射规则，全面兼容默认驼峰列名及 `DB_UNDERSCORED=true`（蛇形列名）部署环境，支持 PostgreSQL、MySQL、MariaDB 与 SQLite 的平滑升级。
+
 ---
 
 ## 💻 配置与使用指南

@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@nocobase/server', () => ({ Plugin: class {} }));
-import { PluginCustomLoginPageServer } from '../index';
+vi.mock('@nocobase/server', () => ({ Plugin: class {}, Migration: class {} }));
+import { PluginCustomLoginPageServer, isSchemaDriftError, toSnakeCase } from '../index';
+import AddMobileColumnsMigration from '../migrations/20260930000000-add-mobile-columns';
 
 describe('configuration persistence and last good cache', () => {
   let plugin: any;
@@ -224,6 +225,224 @@ describe('configuration persistence and last good cache', () => {
       expect(addColumn).toHaveBeenCalledWith('custom_login_configs', 'enableMobileTheme', expect.any(Object));
       expect(addColumn).toHaveBeenCalledWith('custom_login_configs', 'mobileThemeConfig', expect.any(Object));
       expect(addColumn).toHaveBeenCalledWith('custom_login_configs', 'mobileContainerStyle', expect.any(Object));
+    });
+
+    it('uses Collection.sync() when DB_UNDERSCORED=true and snake_case columns are missing (even if camelCase columns were added by old beta)', async () => {
+      const colSync = vi.fn().mockResolvedValue(undefined);
+      const addColumn = vi.fn().mockResolvedValue(undefined);
+      const queryInterface = {
+        showAllTables: vi.fn().mockResolvedValue(['custom_login_configs']),
+        describeTable: vi.fn().mockResolvedValue({
+          id: {},
+          key: {},
+          enabled: {},
+          // 模拟旧版 0.2.0-beta.17 误建的驼峰列，蛇形列仍缺失
+          enableMobileCustom: {},
+          mobileGridSchema: {},
+          enableMobileTheme: {},
+          mobileThemeConfig: {},
+          mobileContainerStyle: {},
+        }),
+        addColumn,
+      };
+
+      const mockCol = {
+        sync: colSync,
+        model: {
+          rawAttributes: {
+            id: { field: 'id' },
+            key: { field: 'key' },
+            enabled: { field: 'enabled' },
+            enableMobileCustom: { field: 'enable_mobile_custom' },
+            mobileGridSchema: { field: 'mobile_grid_schema' },
+            enableMobileTheme: { field: 'enable_mobile_theme' },
+            mobileThemeConfig: { field: 'mobile_theme_config' },
+            mobileContainerStyle: { field: 'mobile_container_style' },
+          },
+        },
+      };
+
+      plugin.db = {
+        options: { underscored: true },
+        getRepository: () => repo,
+        getCollection: () => mockCol,
+        sequelize: {
+          getQueryInterface: () => queryInterface,
+          transaction,
+        },
+      };
+
+      await plugin.autoHealSchema();
+
+      expect(colSync).toHaveBeenCalledTimes(1);
+      expect(addColumn).not.toHaveBeenCalled();
+    });
+
+    it('skips Collection.sync() when all mapped snake_case columns already exist', async () => {
+      const colSync = vi.fn().mockResolvedValue(undefined);
+      const addColumn = vi.fn().mockResolvedValue(undefined);
+      const queryInterface = {
+        showAllTables: vi.fn().mockResolvedValue(['custom_login_configs']),
+        describeTable: vi.fn().mockResolvedValue({
+          id: {},
+          key: {},
+          enabled: {},
+          enable_mobile_custom: {},
+          mobile_grid_schema: {},
+          enable_mobile_theme: {},
+          mobile_theme_config: {},
+          mobile_container_style: {},
+        }),
+        addColumn,
+      };
+
+      const mockCol = {
+        sync: colSync,
+        model: {
+          rawAttributes: {
+            id: { field: 'id' },
+            key: { field: 'key' },
+            enabled: { field: 'enabled' },
+            enableMobileCustom: { field: 'enable_mobile_custom' },
+            mobileGridSchema: { field: 'mobile_grid_schema' },
+            enableMobileTheme: { field: 'enable_mobile_theme' },
+            mobileThemeConfig: { field: 'mobile_theme_config' },
+            mobileContainerStyle: { field: 'mobile_container_style' },
+          },
+        },
+      };
+
+      plugin.db = {
+        options: { underscored: true },
+        getRepository: () => repo,
+        getCollection: () => mockCol,
+        sequelize: {
+          getQueryInterface: () => queryInterface,
+          transaction,
+        },
+      };
+
+      await plugin.autoHealSchema();
+
+      expect(colSync).not.toHaveBeenCalled();
+      expect(addColumn).not.toHaveBeenCalled();
+    });
+
+    it('falls back to snake_case column names in addColumn when underscored is enabled and col.sync is unavailable', async () => {
+      const addColumn = vi.fn().mockResolvedValue(undefined);
+      const queryInterface = {
+        showAllTables: vi.fn().mockResolvedValue(['custom_login_configs']),
+        describeTable: vi.fn().mockResolvedValue({
+          id: {},
+          key: {},
+          enabled: {},
+        }),
+        addColumn,
+      };
+
+      plugin.db = {
+        options: { underscored: true },
+        getRepository: () => repo,
+        sequelize: {
+          getQueryInterface: () => queryInterface,
+          transaction,
+        },
+      };
+
+      await plugin.autoHealSchema();
+
+      expect(addColumn).toHaveBeenCalledTimes(5);
+      expect(addColumn).toHaveBeenCalledWith('custom_login_configs', 'enable_mobile_custom', expect.any(Object));
+      expect(addColumn).toHaveBeenCalledWith('custom_login_configs', 'mobile_grid_schema', expect.any(Object));
+      expect(addColumn).toHaveBeenCalledWith('custom_login_configs', 'enable_mobile_theme', expect.any(Object));
+      expect(addColumn).toHaveBeenCalledWith('custom_login_configs', 'mobile_theme_config', expect.any(Object));
+      expect(addColumn).toHaveBeenCalledWith('custom_login_configs', 'mobile_container_style', expect.any(Object));
+    });
+
+    it('migration uses snake_case mapping and prefers Collection.sync() under DB_UNDERSCORED=true', async () => {
+      const colSync = vi.fn().mockResolvedValue(undefined);
+      const addColumn = vi.fn().mockResolvedValue(undefined);
+      const migration: any = new AddMobileColumnsMigration();
+      migration.app = {
+        logger: { info: vi.fn(), warn: vi.fn() },
+        db: {
+          options: { underscored: true },
+          getCollection: () => ({
+            sync: colSync,
+            model: {
+              rawAttributes: {
+                enableMobileCustom: { field: 'enable_mobile_custom' },
+                mobileGridSchema: { field: 'mobile_grid_schema' },
+                enableMobileTheme: { field: 'enable_mobile_theme' },
+                mobileThemeConfig: { field: 'mobile_theme_config' },
+                mobileContainerStyle: { field: 'mobile_container_style' },
+              },
+            },
+          }),
+          sequelize: {
+            getQueryInterface: () => ({
+              showAllTables: vi.fn().mockResolvedValue(['custom_login_configs']),
+              describeTable: vi.fn().mockResolvedValue({ id: {}, key: {} }),
+              addColumn,
+            }),
+          },
+        },
+      };
+
+      await migration.up();
+      expect(colSync).toHaveBeenCalledTimes(1);
+      expect(addColumn).not.toHaveBeenCalled();
+    });
+
+    it('detects missing column errors as schema drift and recovers/falls back gracefully in getConfig, getPublicConfig and saveConfig', async () => {
+      expect(toSnakeCase('enableMobileCustom')).toBe('enable_mobile_custom');
+      expect(isSchemaDriftError(new Error("Unknown column 'enable_mobile_custom' in 'SELECT'"))).toBe(true);
+      expect(isSchemaDriftError(new Error('SQLITE_ERROR: no such column: enable_mobile_custom'))).toBe(true);
+      expect(isSchemaDriftError(new Error('offline'))).toBe(false);
+
+      const mockCol = { sync: vi.fn().mockResolvedValue(undefined) };
+      const mariaDbColErr = Object.assign(new Error("Unknown column 'enable_mobile_custom' in 'SELECT'"), {
+        original: { errno: 1054, sqlState: '42S22', code: 'ER_BAD_FIELD_ERROR' },
+      });
+
+      const driftRepo = {
+        findOne: vi
+          .fn()
+          .mockRejectedValueOnce(mariaDbColErr)
+          .mockRejectedValueOnce(mariaDbColErr),
+      };
+
+      const freshPlugin = new PluginCustomLoginPageServer();
+      let capturedActions: any = null;
+      Object.assign(freshPlugin, {
+        db: {
+          getRepository: () => driftRepo,
+          getCollection: () => mockCol,
+        },
+        app: {
+          resource: (res: any) => { capturedActions = res.actions; },
+          acl: { allow: vi.fn(), registerSnippet: vi.fn() },
+          logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+        },
+      });
+      await freshPlugin.load();
+
+      // getConfig: 即使自愈后重试依然缺列，也应优雅降级返回默认值而不是抛 503
+      const getCtx: any = { action: { params: {} }, request: {}, body: undefined, throw: vi.fn() };
+      const getNext = vi.fn();
+      await capturedActions.getConfig(getCtx, getNext);
+      expect(mockCol.sync).toHaveBeenCalledTimes(1);
+      expect(getCtx.throw).not.toHaveBeenCalled();
+      expect(getNext).toHaveBeenCalled();
+      expect(getCtx.body).toMatchObject({ enabled: true, template: 'split' });
+
+      // getPublicConfig: 遇到缺列错误时尝试自愈并成功读取配置
+      const healedRecord = { key: 'default', enabled: true, template: 'center', canvasWidth: 'wide' };
+      driftRepo.findOne.mockRejectedValueOnce(mariaDbColErr).mockResolvedValueOnce(healedRecord);
+      const pubCtx: any = { set: vi.fn(), body: undefined };
+      await capturedActions.getPublicConfig(pubCtx, vi.fn());
+      expect(mockCol.sync).toHaveBeenCalledTimes(2);
+      expect(pubCtx.body).toMatchObject({ enabled: true, template: 'center' });
     });
   });
 

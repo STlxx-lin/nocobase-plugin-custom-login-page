@@ -221,6 +221,50 @@ const sanitizeConfigValues = (input: any) => {
   return sanitized;
 };
 
+const MOBILE_COLUMNS_FALLBACK = [
+  { name: 'enableMobileCustom', type: DataTypes.BOOLEAN, options: { defaultValue: false } },
+  { name: 'mobileGridSchema', type: DataTypes.TEXT, options: { allowNull: true } },
+  { name: 'enableMobileTheme', type: DataTypes.BOOLEAN, options: { defaultValue: false } },
+  { name: 'mobileThemeConfig', type: DataTypes.TEXT, options: { defaultValue: '{}' } },
+  { name: 'mobileContainerStyle', type: DataTypes.STRING(255), options: { defaultValue: 'transparent' } },
+];
+
+export const toSnakeCase = (name: string): string =>
+  name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+
+export const isSchemaDriftError = (err: any): boolean => {
+  const errMsg = String(err?.message || err || '').toLowerCase();
+  const code = String(err?.original?.code || err?.parent?.code || err?.code || '').toUpperCase();
+  const errno = Number(err?.original?.errno ?? err?.parent?.errno ?? err?.errno);
+  const sqlState = String(err?.original?.sqlState || err?.parent?.sqlState || err?.sqlState || '').toUpperCase();
+
+  return (
+    errMsg.includes('no such table') ||
+    errMsg.includes("doesn't exist") ||
+    errMsg.includes('does not exist') ||
+    errMsg.includes('relation') ||
+    errMsg.includes('unknown column') ||
+    errMsg.includes('no such column') ||
+    errMsg.includes('has no column') ||
+    errMsg.includes('invalid column') ||
+    code === 'ER_BAD_FIELD_ERROR' ||
+    code === 'ER_NO_SUCH_TABLE' ||
+    code === '42703' ||
+    code === '42P01' ||
+    errno === 1054 ||
+    errno === 1146 ||
+    sqlState === '42S22' ||
+    sqlState === '42S02'
+  );
+};
+
+const hasColumnInDescription = (description: Record<string, any>, columnName: string): boolean => {
+  if (!description || typeof description !== 'object') return false;
+  if (Object.prototype.hasOwnProperty.call(description, columnName)) return true;
+  const lower = columnName.toLowerCase();
+  return Object.keys(description).some((key) => key.toLowerCase() === lower);
+};
+
 const safeParse = (val: any, fallback: any) => {
   if (!val) return fallback;
   if (typeof val === 'object' && val !== null) return val;
@@ -375,44 +419,89 @@ export class PluginCustomLoginPageServer extends Plugin {
     return repo || null;
   }
 
+  private isUnderscored(): boolean {
+    if (typeof this.db?.options?.underscored === 'boolean') {
+      return this.db.options.underscored;
+    }
+    const sequelizeUnderscored = (this.db?.sequelize as any)?.options?.define?.underscored;
+    if (typeof sequelizeUnderscored === 'boolean') {
+      return sequelizeUnderscored;
+    }
+    return process.env.DB_UNDERSCORED === 'true';
+  }
+
   /**
    * 自动自愈式表结构校验与无感迁移：
-   * 运行时检查并动态补齐移动端专属 5 个字段，避免因旧表结构缺失抛出 SQL 异常
+   * 优先通过 NocoBase Collection.sync() 按 ORM 映射（兼容 DB_UNDERSCORED=true 与表前缀/Schema）补齐缺失列，
+   * 避免硬编码驼峰列名导致 DB_UNDERSCORED=true 下出现 1054 Unknown column 异常。
    */
-  async autoHealSchema(): Promise<void> {
+  async autoHealSchema(forceSyncOnNoQueryInterface = false): Promise<void> {
     try {
+      const col = this.db?.getCollection?.('custom_login_configs');
       const queryInterface = this.db?.sequelize?.getQueryInterface?.();
-      if (!queryInterface) return;
-      const tableName = 'custom_login_configs';
-      const tables = await queryInterface.showAllTables();
-      const tableExists = tables.some((t: any) => {
-        const name = typeof t === 'string' ? t : t?.tableName;
-        return name === tableName || name?.toLowerCase() === tableName.toLowerCase();
-      });
-      if (!tableExists) {
-        const col = this.db?.getCollection?.('custom_login_configs');
-        if (typeof col?.sync === 'function') {
-          this.logInfo(`Table ${tableName} does not exist in DB, auto-syncing collection to create table`);
+      if (!queryInterface) {
+        if (forceSyncOnNoQueryInterface && typeof col?.sync === 'function') {
+          this.logInfo('Auto-healing schema via collection.sync()');
           await col.sync();
         }
         return;
       }
 
-      const description = await queryInterface.describeTable(tableName);
-      const columnsToAdd = [
-        { name: 'enableMobileCustom', type: DataTypes.BOOLEAN, options: { defaultValue: false } },
-        { name: 'mobileGridSchema', type: DataTypes.TEXT, options: { allowNull: true } },
-        { name: 'enableMobileTheme', type: DataTypes.BOOLEAN, options: { defaultValue: false } },
-        { name: 'mobileThemeConfig', type: DataTypes.TEXT, options: { defaultValue: '{}' } },
-        { name: 'mobileContainerStyle', type: DataTypes.STRING(255), options: { defaultValue: 'transparent' } },
-      ];
+      const rawTableName =
+        (typeof col?.getTableNameWithSchema === 'function' ? col.getTableNameWithSchema() : null) ||
+        (typeof col?.model?.getTableName === 'function' ? col.model.getTableName() : null) ||
+        'custom_login_configs';
+      const plainTableName =
+        typeof rawTableName === 'string' ? rawTableName : rawTableName?.tableName || 'custom_login_configs';
 
-      for (const col of columnsToAdd) {
-        if (!description[col.name]) {
-          this.logInfo(`Auto-healing schema: adding missing column ${col.name} to ${tableName}`);
-          await queryInterface.addColumn(tableName, col.name, {
-            type: col.type,
-            ...col.options,
+      const tables = await queryInterface.showAllTables();
+      const tableExists = tables.some((t: any) => {
+        const name = typeof t === 'string' ? t : t?.tableName;
+        return name === plainTableName || name?.toLowerCase() === plainTableName.toLowerCase();
+      });
+      if (!tableExists) {
+        if (typeof col?.sync === 'function') {
+          this.logInfo(`Table ${plainTableName} does not exist in DB, auto-syncing collection to create table`);
+          await col.sync();
+        }
+        return;
+      }
+
+      const underscored = this.isUnderscored();
+      const rawAttributes = col?.model?.rawAttributes;
+      const resolveColumnName = (fieldName: string): string => {
+        const mapped = rawAttributes?.[fieldName]?.field;
+        if (mapped) return mapped;
+        return underscored ? toSnakeCase(fieldName) : fieldName;
+      };
+
+      const expectedColumns: string[] =
+        rawAttributes && Object.keys(rawAttributes).length > 0
+          ? Object.entries(rawAttributes).map(([attrName, attr]: [string, any]) => attr?.field || resolveColumnName(attrName))
+          : MOBILE_COLUMNS_FALLBACK.map((c) => resolveColumnName(c.name));
+
+      const description = await queryInterface.describeTable(rawTableName);
+      const missingColumns = expectedColumns.filter((colName) => !hasColumnInDescription(description, colName));
+
+      if (missingColumns.length === 0) {
+        return;
+      }
+
+      if (typeof col?.sync === 'function') {
+        this.logInfo(
+          `Auto-healing schema: syncing collection ${plainTableName} for missing columns (${missingColumns.join(', ')})`
+        );
+        await col.sync();
+        return;
+      }
+
+      for (const item of MOBILE_COLUMNS_FALLBACK) {
+        const columnName = resolveColumnName(item.name);
+        if (!hasColumnInDescription(description, columnName)) {
+          this.logInfo(`Auto-healing schema: adding missing column ${columnName} to ${plainTableName}`);
+          await queryInterface.addColumn(rawTableName, columnName, {
+            type: item.type,
+            ...item.options,
           });
         }
       }
@@ -446,11 +535,27 @@ export class PluginCustomLoginPageServer extends Plugin {
               record = await repo.findOne({ filter: { key: 'default' } });
             }
           } catch (err: any) {
-            this.logWarn('Failed to read public config', err);
-            // Never replace a working page with defaults during a database outage.
-            ctx.body = this.cachedPublicConfig || { enabled: false };
-            await next();
-            return;
+            if (isSchemaDriftError(err)) {
+              this.logError('Schema drift detected while reading public config, attempting auto-heal', err);
+              try {
+                await this.autoHealSchema(true);
+                const repo = this.getRepo();
+                if (repo) {
+                  record = await repo.findOne({ filter: { key: 'default' } });
+                }
+              } catch (healErr: any) {
+                this.logWarn('Failed to recover public config after schema auto-heal', healErr);
+                ctx.body = this.cachedPublicConfig || { enabled: false };
+                await next();
+                return;
+              }
+            } else {
+              this.logWarn('Failed to read public config', err);
+              // Never replace a working page with defaults during a database outage.
+              ctx.body = this.cachedPublicConfig || { enabled: false };
+              await next();
+              return;
+            }
           }
 
           const rawRecord = (record?.toJSON ? record.toJSON() : record) || DEFAULT_CONFIG_VALUES;
@@ -485,28 +590,20 @@ export class PluginCustomLoginPageServer extends Plugin {
             record = await repo.findOne({ filter: { key: 'default' } });
           } catch (err: any) {
             this.logError('Failed to read config', err);
-            // 降级策略：检测是否由于表尚未创建（空白数据库/未执行迁移），若是则尝试自愈建表
-            const errMsg = String(err?.message || err);
-            const isTableMissing =
-              errMsg.includes('no such table') ||
-              errMsg.includes("doesn't exist") ||
-              errMsg.includes('does not exist') ||
-              errMsg.includes('relation');
-            if (isTableMissing) {
+            // 降级策略：检测是否由于缺表或缺列导致（空白数据库/版本升级 Schema 漂移），若是则尝试自愈并优雅降级
+            const schemaDrift = isSchemaDriftError(err);
+            if (schemaDrift) {
               try {
-                const col = this.db?.getCollection?.('custom_login_configs');
-                if (typeof col?.sync === 'function') {
-                  this.logInfo('Table missing on getConfig, auto-syncing collection table...');
-                  await col.sync();
-                  const repo = this.getRepo();
-                  record = await repo?.findOne?.({ filter: { key: 'default' } });
-                }
+                this.logInfo('Schema drift detected on getConfig (missing table or column), auto-healing schema...');
+                await this.autoHealSchema(true);
+                const repo = this.getRepo();
+                record = await repo?.findOne?.({ filter: { key: 'default' } });
               } catch (syncErr: any) {
-                this.logWarn('Auto-sync table on missing table error failed', syncErr);
+                this.logWarn('Auto-heal schema on getConfig failed, falling back to default config', syncErr);
               }
             }
             // 若数据库发生真实故障（如网络断开/离线），必须安全抛出 503 阻止前端覆盖已有页面
-            if (!record && !isTableMissing) {
+            if (!record && !schemaDrift) {
               ctx.throw(503, 'Configuration could not be loaded. Please retry.');
             }
           }
@@ -553,18 +650,9 @@ export class PluginCustomLoginPageServer extends Plugin {
               try {
                 existing = await repo.findOne(findOptions);
               } catch (findErr: any) {
-                const errMsg = String(findErr?.message || findErr);
-                if (
-                  errMsg.includes('no such table') ||
-                  errMsg.includes("doesn't exist") ||
-                  errMsg.includes('does not exist') ||
-                  errMsg.includes('relation')
-                ) {
-                  const col = this.db?.getCollection?.('custom_login_configs');
-                  if (typeof col?.sync === 'function') {
-                    await col.sync();
-                    existing = await repo.findOne(findOptions);
-                  }
+                if (isSchemaDriftError(findErr)) {
+                  await this.autoHealSchema(true);
+                  existing = await repo.findOne(findOptions);
                 } else {
                   throw findErr;
                 }

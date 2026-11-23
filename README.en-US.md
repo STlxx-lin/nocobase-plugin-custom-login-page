@@ -135,6 +135,8 @@ yarn nocobase pm enable @nocobase/plugin-custom-login-page
 yarn nocobase upgrade
 ```
 
+> **Database Compatibility**: Schema auto-sync follows NocoBase ORM column mapping rules and is fully compatible with both default camelCase columns and `DB_UNDERSCORED=true` (snake_case) deployments across PostgreSQL, MySQL, MariaDB, and SQLite.
+
 ---
 
 ## 💻 Configuration & User Guide
